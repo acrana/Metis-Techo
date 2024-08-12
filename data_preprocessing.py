@@ -1,4 +1,4 @@
-# data_preprocessing.py
+# defunct for now
 
 import pandas as pd
 
@@ -8,13 +8,14 @@ def load_data(file_path):
 
 def preprocess_data(data):
     """Preprocess the dataset (e.g., handle missing values)."""
-    # For simplicity, let's drop any rows with missing values
     data = data.dropna()
     return data
 
 def save_preprocessed_data(data, output_path):
     """Save the preprocessed dataset to a CSV file."""
     data.to_csv(output_path, index=False)
+
+# data paths need updating
 
 if __name__ == "__main__":
     input_path = "data/simpledata.csv"
