@@ -1,4 +1,4 @@
-# defunct for now
+# NEW PATH
 
 import pandas as pd
 
@@ -15,7 +15,6 @@ def save_preprocessed_data(data, output_path):
     """Save the preprocessed dataset to a CSV file."""
     data.to_csv(output_path, index=False)
 
-# data paths need updating
 
 if __name__ == "__main__":
     input_path = "data/simpledata.csv"
