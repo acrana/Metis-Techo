@@ -1,7 +1,3 @@
-from tensorflow.keras.models import load_model
-
-# Load the saved model
-model = load_model('models/ai_cdss_model.h5')
-
-# Use the model to make predictions
-predictions = model.predict(new_data)
+# Save the model
+model.save('models/model.h5')
+print("Model training completed and saved.")
