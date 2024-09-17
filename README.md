@@ -32,3 +32,15 @@ By working on this project, I hope to gain hands-on experience with these techno
 
 
 ![GetImage](https://github.com/user-attachments/assets/2cc4101e-54b5-4b97-99b7-212758295f8b)
+
+```mermaid
+graph TD
+    UI[User Interface<br>(main.py)] -->|Interacts with| DAL[Data Access Layer<br>(data_access.py)]
+    DAL -->|Queries| DB[(SQLite Database<br>clinical_decision_support.db)]
+    UI -->|Initiates| RA[Risk Assessment<br>(risk_assessment.py)]
+    RA -->|Uses| DP[Data Preprocessing<br>(preprocessing.py)]
+    DP -->|Processes Data for| ML[Machine Learning Model<br>(model.h5)]
+    ML -->|Provides Risk Prediction to| RA
+    RA -->|Returns Results to| UI
+    MT[Model Training<br>(model_training.py)] -->|Saves Model to| ML
+
