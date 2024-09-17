@@ -7,11 +7,13 @@ This project aims to develop an AI-driven Clinical Decision Support System (CDSS
 ## Project Purpose
 
 The primary goal of this project is to learn and experiment with:
-**Python 3
-**SQLite: Database management
-**Pandas: Data manipulation and analysis
-**TensorFlow/Keras: Machine learning model building and training
-**scikit-learn: Data preprocessing and utilities
+
+- **Python 3**
+- **SQLite**: Database management
+- **Pandas**: Data manipulation and analysis
+- **TensorFlow/Keras**: Machine learning model building and training
+- **scikit-learn**: Data preprocessing and utilities
+
 
 
 By working on this project, I hope to gain hands-on experience with these technologies and eventually develop a functional CDSS.
