@@ -1,36 +1,13 @@
-# src/generate_data.py
+import sqlite3
 import pandas as pd
-import numpy as np
 
-# Generate simple patient data
-patient_data = {
-    'PatientID': range(1, 101),
-    'Age': np.random.randint(18, 90, 100),
-    'Gender': np.random.choice(['Male', 'Female'], 100),
-    'BloodPressure': np.random.randint(90, 160, 100),
-    'Cholesterol': np.random.randint(100, 300, 100),
-    'Diabetes': np.random.choice([0, 1], 100)
-}
+# Connect to the SQLite database
+conn = sqlite3.connect('clinical_decision_support.db')
 
-# Convert to DataFrame
-df_patients = pd.DataFrame(patient_data)
+# Read tables into pandas DataFrames
+demographics_df = pd.read_sql_query("SELECT * FROM TBL_Demographics", conn)
+survey_df = pd.read_sql_query("SELECT * FROM TBL_Survey", conn)
+ade_records_df = pd.read_sql_query("SELECT * FROM TBL_ADERecords", conn)
 
-# Save to CSV
-df_patients.to_csv('data/simpledata.csv', index=False)
-
-# Generate simple medication data
-medication_data = {
-    'MedicationID': range(1, 101),
-    'PatientID': range(1, 101),
-    'Medication': np.random.choice(['MedA', 'MedB', 'MedC'], 100),
-    'Dosage': np.random.randint(1, 100, 100),
-    'Outcome': np.random.choice([0, 1], 100)
-}
-
-# Convert to DataFrame
-df_medications = pd.DataFrame(medication_data)
-
-# Save to CSV
-df_medications.to_csv('data/simplemedications.csv', index=False)
-
-print("Data generated and saved.")
+# Close the connection
+conn.close()
