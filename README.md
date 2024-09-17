@@ -12,3 +12,6 @@ The primary goal of this project is to learn and experiment with:
 - **TensorFlow**: For building and training machine learning models that can provide clinical decision support.
 
 By working on this project, I hope to gain hands-on experience with these technologies and eventually develop a functional CDSS.
+
+
+![GetImage](https://github.com/user-attachments/assets/2cc4101e-54b5-4b97-99b7-212758295f8b)
