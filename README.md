@@ -34,11 +34,12 @@ By working on this project, I hope to gain hands-on experience with these techno
 ![GetImage](https://github.com/user-attachments/assets/2cc4101e-54b5-4b97-99b7-212758295f8b)
 ```mermaid
 graph TD
-    UI[User Interface\n(main.py)] -->|Interacts with| DAL[Data Access Layer\n(data_access.py)]
-    DAL -->|Queries| DB[(SQLite Database\nclinical_decision_support.db)]
-    UI -->|Initiates| RA[Risk Assessment\n(risk_assessment.py)]
-    RA -->|Uses| DP[Data Preprocessing\n(preprocessing.py)]
-    DP -->|Processes Data for| ML[Machine Learning Model\n(model.h5)]
+    UI[User Interface main.py] -->|Interacts with| DAL[Data Access Layer data_access.py]
+    DAL -->|Queries| DB[SQLite Database clinical_decision_support.db]
+    UI -->|Initiates| RA[Risk Assessment risk_assessment.py]
+    RA -->|Uses| DP[Data Preprocessing preprocessing.py]
+    DP -->|Processes Data for| ML[Machine Learning Model model.h5]
     ML -->|Provides Risk Prediction to| RA
     RA -->|Returns Results to| UI
-    MT[Model Training\n(model_training.py)] -->|Saves Model to| ML
+    MT[Model Training model_training.py] -->|Saves Model to| ML
+
