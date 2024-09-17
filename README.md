@@ -19,11 +19,16 @@ The primary goal of this project is to learn and experiment with:
 By working on this project, I hope to gain hands-on experience with these technologies and eventually develop a functional CDSS.
 
 
-Patient Data Management: Stores and manages patient demographics, survey results, and adverse drug event (ADE) records.
-Risk Prediction: Uses a machine learning model to predict the risk of ADEs in patients.
-Interactive Command-Line Interface: Allows users to interact with the system, view patient information, and assess risk.
-Data Preprocessing: Implements data cleaning and preprocessing steps to prepare data for modeling.
-Modular Code Structure: Organized codebase for easy understanding and extensibility.
+- **Patient Data Management**: Stores and manages patient demographics, survey results, and adverse drug event (ADE) records.
+
+- **Risk Prediction**: Uses a machine learning model to predict the risk of ADEs in patients.
+
+- **Interactive Command-Line Interface**: Allows users to interact with the system, view patient information, and assess risk.
+
+- **Data Preprocessing**: Implements data cleaning and preprocessing steps to prepare data for modeling.
+
+- **Modular Code Structure**: Organized codebase for easy understanding and extensibility.
+
 
 
 ![GetImage](https://github.com/user-attachments/assets/2cc4101e-54b5-4b97-99b7-212758295f8b)
