@@ -7,11 +7,20 @@ This project aims to develop an AI-driven Clinical Decision Support System (CDSS
 ## Project Purpose
 
 The primary goal of this project is to learn and experiment with:
-- **Python**: For data manipulation, analysis, and building the core logic of the CDSS.
-- **SQL**: For managing and querying healthcare-related data stored in databases.
-- **TensorFlow**: For building and training machine learning models that can provide clinical decision support.
+**Python 3
+**SQLite: Database management
+**Pandas: Data manipulation and analysis
+**TensorFlow/Keras: Machine learning model building and training
+**scikit-learn: Data preprocessing and utilities
 
 By working on this project, I hope to gain hands-on experience with these technologies and eventually develop a functional CDSS.
+
+
+Patient Data Management: Stores and manages patient demographics, survey results, and adverse drug event (ADE) records.
+Risk Prediction: Uses a machine learning model to predict the risk of ADEs in patients.
+Interactive Command-Line Interface: Allows users to interact with the system, view patient information, and assess risk.
+Data Preprocessing: Implements data cleaning and preprocessing steps to prepare data for modeling.
+Modular Code Structure: Organized codebase for easy understanding and extensibility.
 
 
 ![GetImage](https://github.com/user-attachments/assets/2cc4101e-54b5-4b97-99b7-212758295f8b)
