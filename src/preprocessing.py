@@ -4,8 +4,8 @@ import sqlite3
 import pandas as pd
 import os
 import joblib
+import json
 from sklearn.preprocessing import StandardScaler
-import numpy as np
 
 def load_data():
     # Database path
@@ -68,6 +68,14 @@ def preprocess_data():
     # Ensure consistent feature ordering
     data = data[feature_columns + ['Had_ADE']]
 
+    # Save feature columns for future use
+    models_dir = os.path.join(os.path.dirname(__file__), '..', 'models')
+    if not os.path.exists(models_dir):
+        os.makedirs(models_dir)
+    feature_columns_path = os.path.join(models_dir, 'features.json')
+    with open(feature_columns_path, 'w') as f:
+        json.dump(feature_columns, f)
+
     return data
 
 def preprocess_individual_patient(patient_id, medication_name):
@@ -112,11 +120,16 @@ def preprocess_individual_patient(patient_id, medication_name):
     # Drop irrelevant columns
     data = data.drop(['PatientLast', 'PatientFirst', 'DOB', 'AdmissionDate', 'DischargeDate', 'AttributeName', 'SurveyDate'], axis=1)
 
-    # Feature columns
-    feature_columns = [col for col in data.columns if col != 'Had_ADE']
+    # Load feature columns
+    feature_columns_path = os.path.join(os.path.dirname(__file__), '..', 'models', 'features.json')
+    if not os.path.exists(feature_columns_path):
+        print("Feature columns not found. Please ensure you've saved the feature columns during model training.")
+        return None
+    with open(feature_columns_path, 'r') as f:
+        feature_columns = json.load(f)
 
-    # Ensure consistent feature ordering
-    data = data[feature_columns]
+    # Reindex to ensure all feature columns are present
+    data = data.reindex(columns=feature_columns, fill_value=0)
 
     # Load the scaler
     scaler_path = os.path.join(os.path.dirname(__file__), '..', 'models', 'scaler.joblib')
@@ -126,8 +139,7 @@ def preprocess_individual_patient(patient_id, medication_name):
     scaler = joblib.load(scaler_path)
 
     # Scale the features
-    features_scaled = scaler.transform(data.values)
+    features_scaled = scaler.transform(data)
 
     return features_scaled
-
 
