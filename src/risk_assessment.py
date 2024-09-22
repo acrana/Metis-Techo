@@ -33,3 +33,4 @@ def get_patient_risk_assessment(patient_id, medication_name):
         'RiskLevel': risk_level,
         'RiskProbability': risk_probability
     }
+
