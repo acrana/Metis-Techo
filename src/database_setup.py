@@ -89,25 +89,12 @@ def setup_database():
         (5, 'Ibuprofen', 'Gastrointestinal bleeding after NSAID use', '2023-09-18'),
     ])
 
-    # --- New Code Starts Here ---
     # Create Medication Table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS TBL_Medications (
             MedicationID INTEGER PRIMARY KEY AUTOINCREMENT,
             MedicationName TEXT UNIQUE,
-            RiskFactors TEXT  -- This can be a JSON string or delimited list
-        )
-    ''')
+           
 
-    # Insert sample medications
-    cursor.executemany('''
-        INSERT OR IGNORE INTO TBL_Medications (MedicationName, RiskFactors)
-        VALUES (?, ?)
-    ''', [
-        ('Lisinopril', 'Pregnancy, Angioedema'),
-        ('Metformin', 'Renal impairment, Metabolic acidosis'),
-        ('Amoxicillin', 'Penicillin allergy'),
-        ('Atorvastatin', 'Liver disease, Pregnancy'),
-        ('Ibuprofen', 'Gastrointestinal bleeding, 
 
 
