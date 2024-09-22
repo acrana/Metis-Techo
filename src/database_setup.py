@@ -79,6 +79,21 @@ def setup_database():
 
     # Insert sample ADE records
     cursor.executemany('''
-        INSERT
+        INSERT INTO TBL_ADERecords (PatientID, Medication, ADEDescription, Date)
+        VALUES (?, ?, ?, ?)
+    ''', [
+        (2, 'Insulin', 'Experienced hypoglycemia due to insulin overdose', '2023-09-07'),
+        (3, 'Penicillin', 'Developed an allergic reaction: hives and swelling', '2023-09-11'),
+        (5, 'Ibuprofen', 'Gastrointestinal bleeding after NSAID use', '2023-09-18'),
+    ])
+
+    # Commit changes and close connection
+    conn.commit()
+    conn.close()
+    print("Database setup complete with detailed fake data.")
+
+if __name__ == '__main__':
+    setup_database()
+
 
 
