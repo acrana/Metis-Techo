@@ -11,12 +11,8 @@ def train_model():
     data = preprocess_data()
 
     # Separate features and target
-    X = data.drop(['PatientID', 'Had_ADE'], axis=1)
+    X = data.drop(['Had_ADE'], axis=1)
     y = data['Had_ADE']
-
-    # Feature columns
-    feature_columns = ['Gender', 'Age', 'LengthOfStay', 'Score1', 'Score2', 'Score3', 'Score4']
-    X = X[feature_columns]
 
     # Feature scaling
     scaler = StandardScaler()
@@ -31,8 +27,9 @@ def train_model():
     print(f"Scaler saved to {scaler_path}")
 
     # Build the model
+    input_dim = X_scaled.shape[1]
     model = Sequential([
-        Dense(64, activation='relu', input_shape=(X_scaled.shape[1],)),
+        Dense(64, activation='relu', input_shape=(input_dim,)),
         Dense(32, activation='relu'),
         Dense(1, activation='sigmoid')
     ])
@@ -43,7 +40,7 @@ def train_model():
                   metrics=['accuracy'])
 
     # Train the model
-    model.fit(X_scaled, y, epochs=50, batch_size=8)
+    model.fit(X_scaled, y, epochs=50, batch_size=8, validation_split=0.2)
 
     # Save the model
     model_path = os.path.join(models_dir, 'model.h5')
