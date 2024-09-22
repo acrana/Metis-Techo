@@ -28,14 +28,17 @@ def merge_data(demographics_df, survey_df, ade_records_df):
     return data
 
 def preprocess_data():
-    demographics_df, survey_df, ade_records_df = load_data()
-    data = merge_data(demographics_df, survey_df, ade_records_df)
+    demographics_df, survey_df, ade_records_df, prescriptions_df, medications_df = load_data()
+    data = merge_data(demographics_df, survey_df, ade_records_df, prescriptions_df, medications_df)
 
     # Handle missing values
     data = data.dropna()
 
     # Encode categorical variables
     data['Gender'] = data['Gender'].map({'Male': 0, 'Female': 1})
+
+    # One-hot encode 'MedicationName'
+    data = pd.get_dummies(data, columns=['MedicationName'], prefix='Med', drop_first=True)
 
     # Convert dates and calculate LengthOfStay
     data['AdmissionDate'] = pd.to_datetime(data['AdmissionDate'])
@@ -46,12 +49,13 @@ def preprocess_data():
     data = data.drop(['PatientLast', 'PatientFirst', 'DOB', 'AdmissionDate', 'DischargeDate', 'AttributeName', 'SurveyDate'], axis=1)
 
     # Feature columns
-    feature_columns = ['Gender', 'Age', 'LengthOfStay', 'Score1', 'Score2', 'Score3', 'Score4']
+    feature_columns = [col for col in data.columns if col != 'Had_ADE']
 
     # Ensure consistent feature ordering
-    data = data[['PatientID'] + feature_columns + ['Had_ADE']]
+    data = data[feature_columns + ['Had_ADE']]
 
     return data
+
 
 def preprocess_individual_patient(patient_id):
     # Load the patient's data
