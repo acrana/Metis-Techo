@@ -1,8 +1,11 @@
+# src/preprocessing.py
+
 import sqlite3
 import pandas as pd
 import os
 import joblib
 from sklearn.preprocessing import StandardScaler
+import numpy as np
 
 def load_data():
     # Database path
@@ -13,17 +16,28 @@ def load_data():
     demographics_df = pd.read_sql_query("SELECT * FROM TBL_Demographics", conn)
     survey_df = pd.read_sql_query("SELECT * FROM TBL_Survey", conn)
     ade_records_df = pd.read_sql_query("SELECT * FROM TBL_ADERecords", conn)
+    prescriptions_df = pd.read_sql_query("SELECT * FROM TBL_Prescriptions", conn)
+    medications_df = pd.read_sql_query("SELECT * FROM TBL_Medications", conn)
 
     conn.close()
-    return demographics_df, survey_df, ade_records_df
+    return demographics_df, survey_df, ade_records_df, prescriptions_df, medications_df
 
-def merge_data(demographics_df, survey_df, ade_records_df):
+def merge_data(demographics_df, survey_df, ade_records_df, prescriptions_df, medications_df):
     # Merge demographics and survey data
     data = pd.merge(demographics_df, survey_df, on='PatientID', how='left')
+
+    # Merge prescriptions with medications
+    prescriptions_df = pd.merge(prescriptions_df, medications_df, on='MedicationID', how='left')
+
+    # Merge with main data
+    data = pd.merge(data, prescriptions_df[['PatientID', 'MedicationName', 'Date']], on='PatientID', how='left')
 
     # Create target variable
     patients_with_ade = ade_records_df['PatientID'].unique()
     data['Had_ADE'] = data['PatientID'].apply(lambda x: 1 if x in patients_with_ade else 0)
+
+    # Handle missing medications (patients without prescriptions)
+    data['MedicationName'] = data['MedicationName'].fillna('None')
 
     return data
 
@@ -46,7 +60,7 @@ def preprocess_data():
     data['LengthOfStay'] = (data['DischargeDate'] - data['AdmissionDate']).dt.days
 
     # Drop irrelevant columns
-    data = data.drop(['PatientLast', 'PatientFirst', 'DOB', 'AdmissionDate', 'DischargeDate', 'AttributeName', 'SurveyDate'], axis=1)
+    data = data.drop(['PatientLast', 'PatientFirst', 'DOB', 'AdmissionDate', 'DischargeDate', 'AttributeName', 'SurveyDate', 'Date'], axis=1)
 
     # Feature columns
     feature_columns = [col for col in data.columns if col != 'Had_ADE']
@@ -55,7 +69,6 @@ def preprocess_data():
     data = data[feature_columns + ['Had_ADE']]
 
     return data
-
 
 def preprocess_individual_patient(patient_id, medication_name):
     # Load the patient's data
@@ -116,4 +129,5 @@ def preprocess_individual_patient(patient_id, medication_name):
     features_scaled = scaler.transform(data.values)
 
     return features_scaled
+
 
