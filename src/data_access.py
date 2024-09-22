@@ -1,38 +1,28 @@
-
 import sqlite3
-
-DB_PATH = 'data/clinical_decision_support.db'
-
-def get_connection():
-    conn = sqlite3.connect(DB_PATH)
-    return conn
+import os
+import pandas as pd
 
 def get_patient_demographics(patient_id):
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute('''
-    SELECT * FROM TBL_Demographics WHERE PatientID = ?
-    ''', (patient_id,))
-    result = cursor.fetchone()
+    db_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'clinical_decision_support.db')
+    conn = sqlite3.connect(db_path)
+    query = f"SELECT * FROM TBL_Demographics WHERE PatientID = {patient_id}"
+    df = pd.read_sql_query(query, conn)
     conn.close()
-    return result
+    return df
 
 def get_patient_surveys(patient_id):
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute('''
-    SELECT * FROM TBL_Survey WHERE PatientID = ?
-    ''', (patient_id,))
-    result = cursor.fetchall()
+    db_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'clinical_decision_support.db')
+    conn = sqlite3.connect(db_path)
+    query = f"SELECT * FROM TBL_Survey WHERE PatientID = {patient_id}"
+    df = pd.read_sql_query(query, conn)
     conn.close()
-    return result
+    return df
 
 def get_patient_ade_records(patient_id):
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute('''
-    SELECT * FROM TBL_ADERecords WHERE PatientID = ?
-    ''', (patient_id,))
-    result = cursor.fetchall()
+    db_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'clinical_decision_support.db')
+    conn = sqlite3.connect(db_path)
+    query = f"SELECT * FROM TBL_ADERecords WHERE PatientID = {patient_id}"
+    df = pd.read_sql_query(query, conn)
     conn.close()
-    return result
+    return df
+
