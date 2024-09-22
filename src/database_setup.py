@@ -16,7 +16,7 @@ def setup_database():
     cursor.execute("DROP TABLE IF EXISTS TBL_Medications")
     cursor.execute("DROP TABLE IF EXISTS TBL_Prescriptions")
 
-    # Create tables
+    # Create Demographics Table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS TBL_Demographics (
             PatientID INTEGER PRIMARY KEY,
@@ -30,6 +30,7 @@ def setup_database():
         )
     ''')
 
+    # Create Survey Table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS TBL_Survey (
             SurveyID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -44,6 +45,7 @@ def setup_database():
         )
     ''')
 
+    # Create ADERecords Table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS TBL_ADERecords (
             ADEID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -52,6 +54,27 @@ def setup_database():
             ADEDescription TEXT,
             Date TEXT,
             FOREIGN KEY (PatientID) REFERENCES TBL_Demographics (PatientID)
+        )
+    ''')
+
+    # Create Medications Table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS TBL_Medications (
+            MedicationID INTEGER PRIMARY KEY AUTOINCREMENT,
+            MedicationName TEXT UNIQUE,
+            RiskFactors TEXT  -- This can be a JSON string or delimited list
+        )
+    ''')
+
+    # Create Prescriptions Table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS TBL_Prescriptions (
+            PrescriptionID INTEGER PRIMARY KEY AUTOINCREMENT,
+            PatientID INTEGER,
+            MedicationID INTEGER,
+            Date TEXT,
+            FOREIGN KEY (PatientID) REFERENCES TBL_Demographics (PatientID),
+            FOREIGN KEY (MedicationID) REFERENCES TBL_Medications (MedicationID)
         )
     ''')
 
@@ -89,12 +112,36 @@ def setup_database():
         (5, 'Ibuprofen', 'Gastrointestinal bleeding after NSAID use', '2023-09-18'),
     ])
 
-    # Create Medication Table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS TBL_Medications (
-            MedicationID INTEGER PRIMARY KEY AUTOINCREMENT,
-            MedicationName TEXT UNIQUE,
-           
+    # Insert sample medications
+    cursor.executemany('''
+        INSERT OR IGNORE INTO TBL_Medications (MedicationName, RiskFactors)
+        VALUES (?, ?)
+    ''', [
+        ('Lisinopril', 'Pregnancy, Angioedema'),
+        ('Metformin', 'Renal impairment, Metabolic acidosis'),
+        ('Amoxicillin', 'Penicillin allergy'),
+        ('Atorvastatin', 'Liver disease, Pregnancy'),
+        ('Ibuprofen', 'Gastrointestinal bleeding, Renal impairment'),
+    ])
 
+    # Insert sample prescriptions
+    cursor.executemany('''
+        INSERT INTO TBL_Prescriptions (PatientID, MedicationID, Date)
+        VALUES (?, ?, date('now'))
+    ''', [
+        (1, 1, '2023-09-02'),  # John Doe on Lisinopril
+        (2, 2, '2023-09-06'),  # Jane Smith on Metformin
+        (3, 3, '2023-09-10'),  # Alice Johnson on Amoxicillin
+        (4, 4, '2023-09-14'),  # Robert Brown on Atorvastatin
+        (5, 5, '2023-09-16'),  # Emily Davis on Ibuprofen
+    ])
+
+    # Commit changes and close connection
+    conn.commit()
+    conn.close()
+    print("Database setup complete with extended schema.")
+
+if __name__ == '__main__':
+    setup_database()
 
 
