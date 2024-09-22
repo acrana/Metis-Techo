@@ -127,7 +127,7 @@ def setup_database():
     # Insert sample prescriptions
     cursor.executemany('''
         INSERT INTO TBL_Prescriptions (PatientID, MedicationID, Date)
-        VALUES (?, ?, date('now'))
+        VALUES (?, ?, ?)
     ''', [
         (1, 1, '2023-09-02'),  # John Doe on Lisinopril
         (2, 2, '2023-09-06'),  # Jane Smith on Metformin
