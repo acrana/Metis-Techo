@@ -1,10 +1,12 @@
+# src/risk_assessment.py
+
 from tensorflow.keras.models import load_model
 from preprocessing import preprocess_individual_patient
 import os
 
-def get_patient_risk_assessment(patient_id):
-    # Preprocess the patient's data
-    features = preprocess_individual_patient(patient_id)
+def get_patient_risk_assessment(patient_id, medication_name):
+    # Preprocess the patient's data with the specified medication
+    features = preprocess_individual_patient(patient_id, medication_name)
     if features is None:
         return None
 
@@ -15,7 +17,7 @@ def get_patient_risk_assessment(patient_id):
         return None
     model = load_model(model_path)
 
-    # Predict the risk
+    # Make a prediction
     risk_probability = model.predict(features)[0][0]
 
     # Interpret the risk level
