@@ -1,42 +1,55 @@
-# src/model_training.py
-
-from preprocessing import get_preprocessed_data
-from sklearn.model_selection import train_test_split
-import tensorflow as tf
+import os
+from preprocessing import preprocess_data
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
+from tensorflow.keras.optimizers import Adam
+from sklearn.preprocessing import StandardScaler
+import joblib
 
 def train_model():
-    # Get preprocessed data
-    data = get_preprocessed_data()
-    
-    # Define features and target variable
+    # Load and preprocess data
+    data = preprocess_data()
+
+    # Separate features and target
     X = data.drop(['PatientID', 'Had_ADE'], axis=1)
     y = data['Had_ADE']
-    
-    # Split the data
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, stratify=y, random_state=42)
-    
-    # Define the model architecture
+
+    # Feature columns
+    feature_columns = ['Gender', 'Age', 'LengthOfStay', 'Score1', 'Score2', 'Score3', 'Score4']
+    X = X[feature_columns]
+
+    # Feature scaling
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+
+    # Save the scaler
+    models_dir = os.path.join(os.path.dirname(__file__), '..', 'models')
+    if not os.path.exists(models_dir):
+        os.makedirs(models_dir)
+    scaler_path = os.path.join(models_dir, 'scaler.joblib')
+    joblib.dump(scaler, scaler_path)
+    print(f"Scaler saved to {scaler_path}")
+
+    # Build the model
     model = Sequential([
-        Dense(16, activation='relu', input_shape=(X_train.shape[1],)),
-        Dense(8, activation='relu'),
-        Dense(1, activation='sigmoid')  # Binary classification
+        Dense(64, activation='relu', input_shape=(X_scaled.shape[1],)),
+        Dense(32, activation='relu'),
+        Dense(1, activation='sigmoid')
     ])
-    
+
     # Compile the model
-    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-    
+    model.compile(optimizer=Adam(learning_rate=0.001),
+                  loss='binary_crossentropy',
+                  metrics=['accuracy'])
+
     # Train the model
-    model.fit(X_train, y_train, epochs=50, batch_size=8, validation_split=0.1)
-    
-    # Evaluate the model
-    test_loss, test_accuracy = model.evaluate(X_test, y_test)
-    print(f"Test Accuracy: {test_accuracy:.2f}")
-    
+    model.fit(X_scaled, y, epochs=50, batch_size=8)
+
     # Save the model
-    model.save('models/model.h5')
-    print("Model training completed and saved.")
+    model_path = os.path.join(models_dir, 'model.h5')
+    model.save(model_path)
+    print(f"Model saved to {model_path}")
 
 if __name__ == '__main__':
     train_model()
+
