@@ -57,17 +57,18 @@ def preprocess_data():
     return data
 
 
-def preprocess_individual_patient(patient_id):
+def preprocess_individual_patient(patient_id, medication_name):
     # Load the patient's data
     db_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'clinical_decision_support.db')
     conn = sqlite3.connect(db_path)
 
-    # Get patient data
-    demographics_query = f"SELECT * FROM TBL_Demographics WHERE PatientID = {patient_id}"
-    demographics_df = pd.read_sql_query(demographics_query, conn)
+    # Get patient demographics
+    demographics_query = "SELECT * FROM TBL_Demographics WHERE PatientID = ?"
+    demographics_df = pd.read_sql_query(demographics_query, conn, params=(patient_id,))
 
-    survey_query = f"SELECT * FROM TBL_Survey WHERE PatientID = {patient_id}"
-    survey_df = pd.read_sql_query(survey_query, conn)
+    # Get patient survey data
+    survey_query = "SELECT * FROM TBL_Survey WHERE PatientID = ?"
+    survey_df = pd.read_sql_query(survey_query, conn, params=(patient_id,))
 
     conn.close()
 
@@ -75,29 +76,44 @@ def preprocess_individual_patient(patient_id):
         print(f"No data found for PatientID {patient_id}.")
         return None
 
-    # Merge data
+    # Merge demographics and survey data
     data = pd.merge(demographics_df, survey_df, on='PatientID', how='left')
 
-    # Preprocessing steps
+    # Add medication data
+    data['MedicationName'] = medication_name
+
+    # Handle missing surveys or medications
     data = data.dropna()
+
+    # Encode categorical variables
     data['Gender'] = data['Gender'].map({'Male': 0, 'Female': 1})
+
+    # One-hot encode 'MedicationName'
+    data = pd.get_dummies(data, columns=['MedicationName'], prefix='Med', drop_first=True)
+
+    # Convert dates and calculate LengthOfStay
     data['AdmissionDate'] = pd.to_datetime(data['AdmissionDate'])
     data['DischargeDate'] = pd.to_datetime(data['DischargeDate'])
     data['LengthOfStay'] = (data['DischargeDate'] - data['AdmissionDate']).dt.days
+
+    # Drop irrelevant columns
     data = data.drop(['PatientLast', 'PatientFirst', 'DOB', 'AdmissionDate', 'DischargeDate', 'AttributeName', 'SurveyDate'], axis=1)
 
     # Feature columns
-    feature_columns = ['Gender', 'Age', 'LengthOfStay', 'Score1', 'Score2', 'Score3', 'Score4']
+    feature_columns = [col for col in data.columns if col != 'Had_ADE']
+
+    # Ensure consistent feature ordering
     data = data[feature_columns]
 
-    # Load scaler
+    # Load the scaler
     scaler_path = os.path.join(os.path.dirname(__file__), '..', 'models', 'scaler.joblib')
     if not os.path.exists(scaler_path):
         print("Scaler not found. Please ensure you've saved the scaler during model training.")
         return None
     scaler = joblib.load(scaler_path)
 
-    # Scale features
+    # Scale the features
     features_scaled = scaler.transform(data.values)
 
     return features_scaled
+
