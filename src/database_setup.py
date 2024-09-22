@@ -1,84 +1,76 @@
-
 import sqlite3
+import os
 
 def setup_database():
-    conn = sqlite3.connect('data/clinical_decision_support.db')
+    # Database path
+    db_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'clinical_decision_support.db')
+    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
-    # Create TBL_Demographics
+    # Create tables
     cursor.execute('''
-    CREATE TABLE IF NOT EXISTS TBL_Demographics (
-        PatientID INTEGER PRIMARY KEY,
-        PatientLast TEXT NOT NULL,
-        PatientFirst TEXT NOT NULL,
-        Gender TEXT,
-        DOB DATE,
-        Age INTEGER,
-        AdmissionDate DATE,
-        DischargeDate DATE
-    )
+        CREATE TABLE IF NOT EXISTS TBL_Demographics (
+            PatientID INTEGER PRIMARY KEY,
+            PatientLast TEXT,
+            PatientFirst TEXT,
+            Gender TEXT,
+            DOB TEXT,
+            AdmissionDate TEXT,
+            DischargeDate TEXT,
+            Age INTEGER
+        )
     ''')
 
-    # Create TBL_Survey
     cursor.execute('''
-    CREATE TABLE IF NOT EXISTS TBL_Survey (
-        AttributeName TEXT PRIMARY KEY,
-        PatientID INTEGER,
-        SurveyDate DATE,
-        TrustInMedicationScore INTEGER,
-        UnderstandingMedicationScore INTEGER,
-        SafetyScore INTEGER,
-        OverallSatisfactionScore INTEGER,
-        FOREIGN KEY (PatientID) REFERENCES TBL_Demographics(PatientID)
-    )
+        CREATE TABLE IF NOT EXISTS TBL_Survey (
+            SurveyID INTEGER PRIMARY KEY AUTOINCREMENT,
+            PatientID INTEGER,
+            AttributeName TEXT,
+            Score1 INTEGER,
+            Score2 INTEGER,
+            Score3 INTEGER,
+            Score4 INTEGER,
+            SurveyDate TEXT,
+            FOREIGN KEY (PatientID) REFERENCES TBL_Demographics (PatientID)
+        )
     ''')
 
-    # Create TBL_ADERecords
     cursor.execute('''
-    CREATE TABLE IF NOT EXISTS TBL_ADERecords (
-        ADE_RecordID INTEGER PRIMARY KEY,
-        PatientID INTEGER,
-        DateOfIncident DATE,
-        MedicationInvolved TEXT,
-        Severity TEXT,
-        TreatmentGiven TEXT,
-        FOREIGN KEY (PatientID) REFERENCES TBL_Demographics(PatientID)
-    )
+        CREATE TABLE IF NOT EXISTS TBL_ADERecords (
+            ADEID INTEGER PRIMARY KEY AUTOINCREMENT,
+            PatientID INTEGER,
+            ADEDescription TEXT,
+            Date TEXT,
+            FOREIGN KEY (PatientID) REFERENCES TBL_Demographics (PatientID)
+        )
     ''')
 
-    # Insert sample data into TBL_Demographics
-    demographics_data = [
-        (1, 'Doe', 'John', 'Male', '1980-05-15', 43, '2023-10-01', '2023-10-15'),
-        (2, 'Smith', 'Jane', 'Female', '1990-08-22', 33, '2023-10-05', '2023-10-20')
-    ]
-    cursor.executemany('''
-    INSERT OR IGNORE INTO TBL_Demographics (PatientID, PatientLast, PatientFirst, Gender, DOB, Age, AdmissionDate, DischargeDate)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    ''', demographics_data)
+    # Insert sample data
+    cursor.execute('''
+        INSERT INTO TBL_Demographics (PatientID, PatientLast, PatientFirst, Gender, DOB, AdmissionDate, DischargeDate, Age)
+        VALUES
+            (1, 'Doe', 'John', 'Male', '1980-05-15', '2023-09-01', '2023-09-10', 43),
+            (2, 'Smith', 'Jane', 'Female', '1975-08-20', '2023-09-05', '2023-09-15', 48)
+    ''')
 
-    # Insert sample data into TBL_Survey
-    survey_data = [
-        ('Survey1', 1, '2023-10-10', 8, 7, 9, 8),
-        ('Survey2', 2, '2023-10-12', 9, 8, 8, 9)
-    ]
-    cursor.executemany('''
-    INSERT OR IGNORE INTO TBL_Survey (AttributeName, PatientID, SurveyDate, TrustInMedicationScore, UnderstandingMedicationScore, SafetyScore, OverallSatisfactionScore)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-    ''', survey_data)
+    cursor.execute('''
+        INSERT INTO TBL_Survey (PatientID, AttributeName, Score1, Score2, Score3, Score4, SurveyDate)
+        VALUES
+            (1, 'Initial Survey', 8, 7, 9, 8, '2023-09-02'),
+            (2, 'Initial Survey', 6, 5, 7, 6, '2023-09-06')
+    ''')
 
-    # Insert sample data into TBL_ADERecords
-    ade_records_data = [
-        (1, 1, '2023-10-11', 'Medication A', 'Moderate', 'Antidote A'),
-        (2, 2, '2023-10-13', 'Medication B', 'Severe', 'Antidote B')
-    ]
-    cursor.executemany('''
-    INSERT OR IGNORE INTO TBL_ADERecords (ADE_RecordID, PatientID, DateOfIncident, MedicationInvolved, Severity, TreatmentGiven)
-    VALUES (?, ?, ?, ?, ?, ?)
-    ''', ade_records_data)
+    cursor.execute('''
+        INSERT INTO TBL_ADERecords (PatientID, ADEDescription, Date)
+        VALUES
+            (2, 'Mild rash after medication', '2023-09-08')
+    ''')
 
+    # Commit changes and close connection
     conn.commit()
     conn.close()
-    print("Database setup completed successfully.")
+    print("Database setup complete.")
 
 if __name__ == '__main__':
     setup_database()
+
