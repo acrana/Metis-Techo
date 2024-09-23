@@ -4,6 +4,7 @@ scikit-learn
 tensorflow
 keras
 joblib
+shap
 
 
 #pip install -r requirements.txt
