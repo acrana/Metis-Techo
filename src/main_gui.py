@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import messagebox
 from patients import patients
 from medications import medications
-from main import prescribe_and_monitor, update_patient_labs, find_patient, display_patient_info
+from main import prescribe_and_monitor_gui, update_patient_labs, find_patient
 
 # Create the main application window
 root = tk.Tk()
@@ -33,17 +33,23 @@ def view_patient_info():
     else:
         messagebox.showerror("Error", "Please enter a valid patient ID.")
 
-# Function to prescribe medication
+# Function to prescribe medication with GUI notifications
 def prescribe_medication():
     if not current_patient:
         messagebox.showerror("Error", "Please select a patient first.")
         return
 
-    medication_name = entry_medication.get()
+    medication_name = entry_medication.get().strip()
+    
+    # Check if medication exists
     if medication_name in medications:
-        prescribe_and_monitor(current_patient, medication_name)
-        messagebox.showinfo("Success", f"Medication '{medication_name}' prescribed to Patient {current_patient['PatientID']}.")
-        view_patient_info()  # Update patient info after prescription
+        # Run the prescription and monitoring logic
+        if prescribe_and_monitor_gui(current_patient, medication_name):
+            messagebox.showinfo("Success", f"Medication '{medication_name}' prescribed to Patient {current_patient['PatientID']}.")
+            view_patient_info()  # Update patient info after prescription
+        else:
+            # If the prescription was not successful (due to contraindications)
+            messagebox.showwarning("Warning", f"Cannot prescribe '{medication_name}' due to contraindications.")
     else:
         messagebox.showerror("Error", "Medication not found in database.")
 
@@ -101,3 +107,4 @@ btn_update_labs.grid(row=3, column=2, padx=10, pady=10)
 
 # Run the application
 root.mainloop()
+
