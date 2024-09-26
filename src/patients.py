@@ -1,6 +1,7 @@
 # patients.py
 
 patients = [
+    # First 5 Patients
     {
         'PatientID': 1,
         'FirstName': 'John',
@@ -8,25 +9,27 @@ patients = [
         'Age': 58,
         'Gender': 'Male',
         'Allergies': ['Penicillin', 'Aspirin'],
-        'MedicalHistory': ['Hypertension', 'Type 2 Diabetes', 'Atrial Fibrillation'],
+        'MedicalHistory': ['Hypertension', 'Type 2 Diabetes', 'Atrial Fibrillation', 'Chronic Heart Failure', 'Hyperlipidemia'],
         'LabResults': {
-            'Blood Glucose': 145,          # mg/dL
-            'Creatinine': 1.4,             # mg/dL
-            'Potassium': 5.2,              # mmol/L (slightly elevated)
-            'Sodium': 138,                 # mmol/L
-            'TSH': 3.1,                    # uIU/mL (within normal)
-            'INR': 2.8,                    # Therapeutic range (on Warfarin)
-            'QTc': 480,                    # ms (prolonged QTc)
-            'Troponin': 0.03,              # ng/mL (within normal limits)
-            'Liver Enzymes': 35,           # U/L (within normal)
-            'Hemoglobin A1C': 7.5,         # % (elevated, diabetic)
-            'Blood Pressure': 150,         # mmHg (elevated)
+            'Blood Glucose': 185,          
+            'Hemoglobin A1C': 8.5,         
+            'Creatinine': 1.6,             
+            'Potassium': 5.2,              
+            'Sodium': 136,                 
+            'TSH': 3.5,                    
+            'INR': 2.9,                    
+            'QTc': 480,                    
+            'Bilirubin': 1.1,              
+            'Liver Enzymes': 55,           
+            'Cholesterol (LDL)': 165,      
+            'NT-proBNP': 1200,             
         },
-        'Medications': ['Warfarin', 'Metformin', 'Amiodarone', 'Lisinopril'],
+        'Medications': ['Warfarin', 'Metformin', 'Amiodarone', 'Lisinopril', 'Atorvastatin', 'Insulin', 'Furosemide'],
         'CardiacMonitoring': {
             'ECG': 'Atrial Fibrillation',
-            'QTc': 480,                    # Prolonged QTc interval
-            'HeartRate': 75,               # bpm (controlled with medication)
+            'QTc': 480,                    
+            'EjectionFraction': 40,        
+            'HeartRate': 72,               
         }
     },
     {
@@ -35,24 +38,28 @@ patients = [
         'LastName': 'Smith',
         'Age': 45,
         'Gender': 'Female',
-        'Allergies': ['Ibuprofen', 'Sulfa drugs'],
-        'MedicalHistory': ['Chronic Kidney Disease Stage 3', 'Hypertension'],
+        'Allergies': ['Ibuprofen', 'Sulfa Drugs'],
+        'MedicalHistory': ['Chronic Kidney Disease Stage 3', 'Hypertension', 'Anemia of Chronic Disease', 'Peripheral Neuropathy'],
         'LabResults': {
-            'Blood Glucose': 95,           # mg/dL (normal)
-            'Creatinine': 2.1,             # mg/dL (elevated due to CKD)
-            'Potassium': 4.5,              # mmol/L (normal)
-            'Sodium': 136,                 # mmol/L (normal)
-            'TSH': 4.2,                    # uIU/mL (borderline hypothyroid)
-            'QTc': 420,                    # ms (normal)
-            'eGFR': 38,                    # mL/min/1.73m2 (reduced kidney function)
-            'UrineAlbumin': 250,           # mg/g (sign of kidney damage)
-            'Blood Pressure': 135,         # mmHg (elevated)
+            'Blood Glucose': 95,           
+            'Creatinine': 2.3,             
+            'GFR': 38,                     
+            'Potassium': 4.7,              
+            'Sodium': 137,                 
+            'Hemoglobin': 10.2,            
+            'Iron Saturation': 18,         
+            'TSH': 2.5,                    
+            'Bilirubin': 0.9,              
+            'Parathyroid Hormone (PTH)': 120,  
+            'Calcium': 9.0,                
+            'Phosphorus': 5.5,             
+            'Blood Pressure': 150,         
         },
-        'Medications': ['Losartan', 'Hydrochlorothiazide'],
+        'Medications': ['Losartan', 'Hydrochlorothiazide', 'Ferrous Sulfate', 'Gabapentin', 'Erythropoietin', 'Calcium Carbonate'],
         'CardiacMonitoring': {
             'ECG': 'Normal Sinus Rhythm',
-            'QTc': 420,                    # ms (normal)
-            'HeartRate': 78,               # bpm
+            'HeartRate': 85,               
+            'QTc': 410,                    
         }
     },
     {
@@ -62,25 +69,25 @@ patients = [
         'Age': 68,
         'Gender': 'Male',
         'Allergies': [],
-        'MedicalHistory': ['Coronary Artery Disease', 'Heart Failure with reduced EF', 'Chronic Obstructive Pulmonary Disease (COPD)'],
+        'MedicalHistory': ['Coronary Artery Disease', 'Heart Failure with reduced EF', 'COPD', 'Hyperlipidemia'],
         'LabResults': {
-            'Blood Glucose': 110,          # mg/dL (slightly elevated)
-            'Creatinine': 1.2,             # mg/dL (normal)
-            'Potassium': 4.9,              # mmol/L (high normal)
-            'Sodium': 142,                 # mmol/L (normal)
-            'NT-proBNP': 900,              # pg/mL (elevated, indicative of heart failure)
-            'Troponin': 0.08,              # ng/mL (mild elevation, requires monitoring)
-            'Liver Enzymes': 45,           # U/L (slightly elevated, possible liver congestion)
-            'INR': 1.2,                    # Not on anticoagulants
-            'QTc': 470,                    # ms (slightly prolonged)
-            'Blood Pressure': 145,         # mmHg (elevated)
+            'Creatinine': 1.5,             
+            'Potassium': 5.4,              
+            'Sodium': 135,                 
+            'NT-proBNP': 2500,             
+            'Hemoglobin': 12.5,            
+            'Cholesterol (LDL)': 120,      
+            'Troponin': 0.05,              
+            'Liver Enzymes': 60,           
+            'Blood Pressure': 140,         
+            'INR': 1.0,                    
         },
-        'Medications': ['Carvedilol', 'Spironolactone', 'Furosemide'],
+        'Medications': ['Carvedilol', 'Spironolactone', 'Furosemide', 'Rosuvastatin', 'Albuterol', 'Aspirin'],
         'CardiacMonitoring': {
             'ECG': 'Left Bundle Branch Block',
-            'EjectionFraction': 35,        # % (reduced EF, heart failure)
-            'QTc': 470,                    # ms (slightly prolonged)
-            'HeartRate': 65,               # bpm (medicated control)
+            'EjectionFraction': 35,        
+            'QTc': 460,                    
+            'HeartRate': 68,               
         }
     },
     {
@@ -90,23 +97,23 @@ patients = [
         'Age': 52,
         'Gender': 'Female',
         'Allergies': ['ACE Inhibitors'],
-        'MedicalHistory': ['Diabetes Mellitus Type 1', 'Peripheral Artery Disease', 'Hypertension'],
+        'MedicalHistory': ['Type 1 Diabetes', 'Peripheral Artery Disease', 'Hypertension', 'Hypercholesterolemia'],
         'LabResults': {
-            'Blood Glucose': 250,          # mg/dL (elevated)
-            'Creatinine': 1.6,             # mg/dL (borderline kidney function)
-            'Potassium': 5.3,              # mmol/L (elevated)
-            'Sodium': 140,                 # mmol/L (normal)
-            'Hemoglobin A1C': 9.2,         # % (poor glucose control)
-            'TSH': 2.8,                    # uIU/mL (normal)
-            'QTc': 500,                    # ms (significantly prolonged)
-            'Blood Pressure': 160,         # mmHg (severely elevated)
-            'GFR': 55,                     # mL/min/1.73m2 (mildly reduced)
+            'Blood Glucose': 240,          
+            'Hemoglobin A1C': 9.8,         
+            'Creatinine': 1.9,             
+            'Potassium': 5.7,              
+            'Sodium': 139,                 
+            'Cholesterol (LDL)': 160,      
+            'TSH': 3.1,                    
+            'Calcium': 9.1,                
+            'Blood Pressure': 165,         
         },
-        'Medications': ['Insulin', 'Amlodipine'],
+        'Medications': ['Insulin', 'Amlodipine', 'Clopidogrel', 'Simvastatin', 'Aspirin'],
         'CardiacMonitoring': {
             'ECG': 'Ventricular Tachycardia',
-            'QTc': 500,                    # ms (prolonged, risk of arrhythmias)
-            'HeartRate': 100,              # bpm (tachycardic)
+            'QTc': 510,                    
+            'HeartRate': 100,              
         }
     },
     {
@@ -118,21 +125,147 @@ patients = [
         'Allergies': ['Statins'],
         'MedicalHistory': ['Chronic Liver Disease', 'Hypertension', 'Atrial Fibrillation', 'Hyperkalemia'],
         'LabResults': {
-            'Blood Glucose': 98,           # mg/dL (normal)
-            'Creatinine': 1.3,             # mg/dL (slightly elevated)
-            'Potassium': 6.1,              # mmol/L (dangerously elevated)
-            'Sodium': 137,                 # mmol/L (normal)
-            'Liver Enzymes': 95,           # U/L (elevated, liver disease)
-            'Bilirubin': 2.2,              # mg/dL (elevated, liver disease)
-            'INR': 2.1,                    # Elevated due to liver dysfunction
-            'QTc': 490,                    # ms (prolonged)
-            'Blood Pressure': 140,         # mmHg (elevated)
+            'Blood Glucose': 98,           
+            'Creatinine': 1.3,             
+            'Potassium': 6.1,              
+            'Sodium': 137,                 
+            'Liver Enzymes': 95,           
+            'Bilirubin': 2.2,              
+            'INR': 2.1,                    
+            'QTc': 490,                    
+            'Blood Pressure': 140,         
         },
         'Medications': ['Spironolactone', 'Digoxin'],
         'CardiacMonitoring': {
             'ECG': 'Atrial Fibrillation',
-            'QTc': 490,                    # ms (prolonged)
-            'HeartRate': 90,               # bpm
+            'QTc': 490,                    
+            'HeartRate': 90,               
+        }
+    },
+    
+    # New 5 Patients
+    {
+        'PatientID': 6,
+        'FirstName': 'Olivia',
+        'LastName': 'Green',
+        'Age': 34,
+        'Gender': 'Female',
+        'Allergies': [],
+        'MedicalHistory': ['Hyperthyroidism (Graves\' disease)', 'Asthma', 'Anxiety Disorder'],
+        'LabResults': {
+            'Blood Glucose': 98,           
+            'TSH': 0.2,                    
+            'Free T4': 1.8,                
+            'Potassium': 4.2,              
+            'Sodium': 139,                 
+            'Creatinine': 0.9,             
+            'Liver Enzymes': 25,           
+        },
+        'Medications': ['Levothyroxine', 'Albuterol', 'Sertraline', 'Montelukast'],
+        'CardiacMonitoring': {
+            'ECG': 'Normal Sinus Rhythm',
+            'HeartRate': 85,               
+            'QTc': 430,                    
+        }
+    },
+    {
+        'PatientID': 7,
+        'FirstName': 'James',
+        'LastName': 'Wilson',
+        'Age': 72,
+        'Gender': 'Male',
+        'Allergies': ['NSAIDs'],
+        'MedicalHistory': ['Chronic Kidney Disease Stage 4', 'Osteoarthritis'],
+        'LabResults': {
+            'Blood Glucose': 90,           
+            'Creatinine': 2.9,             
+            'Potassium': 5.0,              
+            'Sodium': 140,                 
+            'TSH': 2.5,                    
+            'Hemoglobin': 11.0,            
+            'GFR': 25,                     
+            'Blood Pressure': 145,         
+        },
+        'Medications': ['Furosemide', 'Losartan', 'Calcium Carbonate', 'Vitamin D'],
+        'CardiacMonitoring': {
+            'ECG': 'Left Ventricular Hypertrophy',
+            'HeartRate': 72,               
+            'QTc': 450,                    
+        }
+    },
+    {
+        'PatientID': 8,
+        'FirstName': 'Sophia',
+        'LastName': 'Brown',
+        'Age': 50,
+        'Gender': 'Female',
+        'Allergies': ['Codeine'],
+        'MedicalHistory': ['Chronic Pain', 'Depression', 'Gastroesophageal Reflux Disease (GERD)'],
+        'LabResults': {
+            'Blood Glucose': 105,          
+            'Creatinine': 1.1,             
+            'Potassium': 4.1,              
+            'Sodium': 140,                 
+            'TSH': 3.0,                    
+            'Hemoglobin': 12.8,            
+            'Blood Pressure': 120,         
+        },
+        'Medications': ['Omeprazole', 'Gabapentin', 'Sertraline'],
+        'CardiacMonitoring': {
+            'ECG': 'Normal Sinus Rhythm',
+            'HeartRate': 78,               
+            'QTc': 420,                    
+        }
+    },
+    {
+        'PatientID': 9,
+        'FirstName': 'Liam',
+        'LastName': 'Thompson',
+        'Age': 65,
+        'Gender': 'Male',
+        'Allergies': ['Amoxicillin'],
+        'MedicalHistory': ['Hypertension', 'Type 2 Diabetes', 'Chronic Obstructive Pulmonary Disease (COPD)'],
+        'LabResults': {
+            'Blood Glucose': 180,          
+            'Hemoglobin A1C': 8.0,         
+            'Creatinine': 1.8,             
+            'Potassium': 4.8,              
+            'Sodium': 138,                 
+            'TSH': 2.8,                    
+            'Cholesterol (LDL)': 150,      
+            'Blood Pressure': 150,         
+        },
+        'Medications': ['Metformin', 'Lisinopril', 'Amlodipine', 'Albuterol'],
+        'CardiacMonitoring': {
+            'ECG': 'Mild Left Ventricular Hypertrophy',
+            'HeartRate': 88,               
+            'QTc': 440,                    
+        }
+    },
+    {
+        'PatientID': 10,
+        'FirstName': 'Emma',
+        'LastName': 'Davis',
+        'Age': 40,
+        'Gender': 'Female',
+        'Allergies': ['Sulfa Drugs'],
+        'MedicalHistory': ['Polycystic Ovary Syndrome (PCOS)', 'Obesity', 'Hypertension', 'Anxiety'],
+        'LabResults': {
+            'Blood Glucose': 160,          
+            'Hemoglobin A1C': 7.2,         
+            'Creatinine': 1.0,             
+            'Potassium': 4.4,              
+            'Sodium': 137,                 
+            'Cholesterol (LDL)': 170,      
+            'TSH': 1.2,                    
+            'Blood Pressure': 145,         
+        },
+        'Medications': ['Metformin', 'Amlodipine', 'Sertraline', 'Atorvastatin'],
+        'CardiacMonitoring': {
+            'ECG': 'Normal Sinus Rhythm',
+            'HeartRate': 82,               
+            'QTc': 430,                    
         }
     }
 ]
+
