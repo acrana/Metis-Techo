@@ -5,6 +5,7 @@ tensorflow
 keras
 joblib
 shap
+faker
 
 
 #pip install -r requirements.txt
