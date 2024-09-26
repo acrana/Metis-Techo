@@ -2,8 +2,15 @@
 
 import sqlite3
 import os
+import random
+from faker import Faker
+import pandas as pd
 
-def setup_database():
+def setup_database(num_patients=1000, num_medications=100, num_prescriptions=5000, num_ade_records=500, num_surveys=2000):
+    fake = Faker()
+    Faker.seed(0)
+    random.seed(0)
+
     # Database path
     db_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'clinical_decision_support.db')
     conn = sqlite3.connect(db_path)
@@ -16,130 +23,88 @@ def setup_database():
     cursor.execute("DROP TABLE IF EXISTS TBL_Medications")
     cursor.execute("DROP TABLE IF EXISTS TBL_Prescriptions")
 
-    # Create Demographics Table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS TBL_Demographics (
-            PatientID INTEGER PRIMARY KEY,
-            PatientLast TEXT,
-            PatientFirst TEXT,
-            Gender TEXT,
-            DOB TEXT,
-            AdmissionDate TEXT,
-            DischargeDate TEXT,
-            Age INTEGER
-        )
-    ''')
+    # Create tables (same as before)
+    # ... (Keep your existing table creation code here)
 
-    # Create Survey Table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS TBL_Survey (
-            SurveyID INTEGER PRIMARY KEY AUTOINCREMENT,
-            PatientID INTEGER,
-            AttributeName TEXT,
-            Score1 INTEGER,
-            Score2 INTEGER,
-            Score3 INTEGER,
-            Score4 INTEGER,
-            SurveyDate TEXT,
-            FOREIGN KEY (PatientID) REFERENCES TBL_Demographics (PatientID)
-        )
-    ''')
+    # Create Medications
+    medications = []
+    risk_factors_list = ["Pregnancy", "Renal impairment", "Metabolic acidosis", "Liver disease", "Angioedema", "Penicillin allergy", "Gastrointestinal bleeding"]
+    for i in range(1, num_medications + 1):
+        medication_name = fake.unique.word().capitalize()
+        risk_factors = ', '.join(random.sample(risk_factors_list, k=random.randint(1, 3)))
+        medications.append((i, medication_name, risk_factors))
 
-    # Create ADERecords Table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS TBL_ADERecords (
-            ADEID INTEGER PRIMARY KEY AUTOINCREMENT,
-            PatientID INTEGER,
-            Medication TEXT,
-            ADEDescription TEXT,
-            Date TEXT,
-            FOREIGN KEY (PatientID) REFERENCES TBL_Demographics (PatientID)
-        )
-    ''')
+    cursor.executemany('''
+        INSERT INTO TBL_Medications (MedicationID, MedicationName, RiskFactors)
+        VALUES (?, ?, ?)
+    ''', medications)
 
-    # Create Medications Table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS TBL_Medications (
-            MedicationID INTEGER PRIMARY KEY AUTOINCREMENT,
-            MedicationName TEXT UNIQUE,
-            RiskFactors TEXT  -- This can be a JSON string or delimited list
-        )
-    ''')
+    # Create Patients
+    patients = []
+    genders = ["Male", "Female"]
+    for i in range(1, num_patients + 1):
+        first_name = fake.first_name()
+        last_name = fake.last_name()
+        gender = random.choice(genders)
+        dob = fake.date_of_birth(minimum_age=20, maximum_age=90).strftime("%Y-%m-%d")
+        admission_date = fake.date_between(start_date='-2y', end_date='today').strftime("%Y-%m-%d")
+        discharge_date = fake.date_between(start_date=admission_date, end_date='today').strftime("%Y-%m-%d")
+        age = 2024 - int(dob[:4])
+        patients.append((i, last_name, first_name, gender, dob, admission_date, discharge_date, age))
 
-    # Create Prescriptions Table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS TBL_Prescriptions (
-            PrescriptionID INTEGER PRIMARY KEY AUTOINCREMENT,
-            PatientID INTEGER,
-            MedicationID INTEGER,
-            Date TEXT,
-            FOREIGN KEY (PatientID) REFERENCES TBL_Demographics (PatientID),
-            FOREIGN KEY (MedicationID) REFERENCES TBL_Medications (MedicationID)
-        )
-    ''')
-
-    # Insert sample patient demographics
     cursor.executemany('''
         INSERT INTO TBL_Demographics (PatientID, PatientLast, PatientFirst, Gender, DOB, AdmissionDate, DischargeDate, Age)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    ''', [
-        (1, 'Doe', 'John', 'Male', '1978-04-12', '2023-09-01', '2023-09-10', 45),
-        (2, 'Smith', 'Jane', 'Female', '1963-11-23', '2023-09-05', '2023-09-15', 60),
-        (3, 'Johnson', 'Alice', 'Female', '1988-07-19', '2023-09-08', '2023-09-18', 35),
-        (4, 'Brown', 'Robert', 'Male', '1973-02-05', '2023-09-12', '2023-09-22', 50),
-        (5, 'Davis', 'Emily', 'Female', '1995-05-30', '2023-09-15', '2023-09-25', 28),
-    ])
+    ''', patients)
 
-    # Insert sample surveys
-    cursor.executemany('''
-        INSERT INTO TBL_Survey (PatientID, AttributeName, Score1, Score2, Score3, Score4, SurveyDate)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    ''', [
-        (1, 'Well-being Survey', 7, 8, 7, 8, '2023-09-02'),
-        (2, 'Diabetes Management Survey', 6, 5, 7, 6, '2023-09-06'),
-        (3, 'Post-Surgery Survey', 8, 9, 8, 7, '2023-09-10'),
-        (4, 'Cardiac Health Survey', 5, 6, 5, 6, '2023-09-14'),
-        (5, 'Infection Symptoms Survey', 7, 7, 8, 8, '2023-09-16'),
-    ])
+    # Create Prescriptions
+    prescriptions = []
+    for i in range(1, num_prescriptions + 1):
+        patient_id = random.randint(1, num_patients)
+        medication_id = random.randint(1, num_medications)
+        date = fake.date_between(start_date='-2y', end_date='today').strftime("%Y-%m-%d")
+        prescriptions.append((patient_id, medication_id, date))
 
-    # Insert sample ADE records
-    cursor.executemany('''
-        INSERT INTO TBL_ADERecords (PatientID, Medication, ADEDescription, Date)
-        VALUES (?, ?, ?, ?)
-    ''', [
-        (2, 'Insulin', 'Experienced hypoglycemia due to insulin overdose', '2023-09-07'),
-        (3, 'Penicillin', 'Developed an allergic reaction: hives and swelling', '2023-09-11'),
-        (5, 'Ibuprofen', 'Gastrointestinal bleeding after NSAID use', '2023-09-18'),
-    ])
-
-    # Insert sample medications
-    cursor.executemany('''
-        INSERT OR IGNORE INTO TBL_Medications (MedicationName, RiskFactors)
-        VALUES (?, ?)
-    ''', [
-        ('Lisinopril', 'Pregnancy, Angioedema'),
-        ('Metformin', 'Renal impairment, Metabolic acidosis'),
-        ('Amoxicillin', 'Penicillin allergy'),
-        ('Atorvastatin', 'Liver disease, Pregnancy'),
-        ('Ibuprofen', 'Gastrointestinal bleeding, Renal impairment'),
-    ])
-
-    # Insert sample prescriptions
     cursor.executemany('''
         INSERT INTO TBL_Prescriptions (PatientID, MedicationID, Date)
         VALUES (?, ?, ?)
-    ''', [
-        (1, 1, '2023-09-02'),  # John Doe on Lisinopril
-        (2, 2, '2023-09-06'),  # Jane Smith on Metformin
-        (3, 3, '2023-09-10'),  # Alice Johnson on Amoxicillin
-        (4, 4, '2023-09-14'),  # Robert Brown on Atorvastatin
-        (5, 5, '2023-09-16'),  # Emily Davis on Ibuprofen
-    ])
+    ''', prescriptions)
+
+    # Create ADE Records
+    ade_descriptions = ["Allergic reaction", "Nausea", "Vomiting", "Dizziness", "Headache", "Rash", "Hypoglycemia"]
+    ade_records = []
+    for i in range(1, num_ade_records + 1):
+        patient_id = random.randint(1, num_patients)
+        medication_id = random.randint(1, num_medications)
+        medication_name = medications[medication_id - 1][1]  # Get medication name from medications list
+        ade_description = random.choice(ade_descriptions)
+        date = fake.date_between(start_date='-2y', end_date='today').strftime("%Y-%m-%d")
+        ade_records.append((patient_id, medication_name, ade_description, date))
+
+    cursor.executemany('''
+        INSERT INTO TBL_ADERecords (PatientID, Medication, ADEDescription, Date)
+        VALUES (?, ?, ?, ?)
+    ''', ade_records)
+
+    # Create Surveys
+    surveys = []
+    survey_types = ["Well-being Survey", "Diabetes Management Survey", "Post-Surgery Survey", "Cardiac Health Survey", "Infection Symptoms Survey"]
+    for i in range(1, num_surveys + 1):
+        patient_id = random.randint(1, num_patients)
+        attribute_name = random.choice(survey_types)
+        scores = [random.randint(1, 10) for _ in range(4)]
+        survey_date = fake.date_between(start_date='-2y', end_date='today').strftime("%Y-%m-%d")
+        surveys.append((patient_id, attribute_name, *scores, survey_date))
+
+    cursor.executemany('''
+        INSERT INTO TBL_Survey (PatientID, AttributeName, Score1, Score2, Score3, Score4, SurveyDate)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    ''', surveys)
 
     # Commit changes and close connection
     conn.commit()
     conn.close()
-    print("Database setup complete with extended schema.")
+    print("Database setup complete with synthetic data.")
 
 if __name__ == '__main__':
     setup_database()
