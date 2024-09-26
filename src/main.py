@@ -8,6 +8,22 @@ def prescribe_medication(patient, medication_name):
         print(f"Medication '{medication_name}' not found.")
         return
 
+    def check_contraindications(patient, medication_name):
+    if medication_name not in medications:
+        print(f"Medication '{medication_name}' not found.")
+        return False
+
+    med_info = medications[medication_name]
+    contraindications = med_info.get('Contraindications', {})
+    for param, condition in contraindications.items():
+        patient_value = patient['LabResults'].get(param)
+        if patient_value is not None and condition(patient_value):
+            print(f"Contraindication Alert: '{medication_name}' cannot be prescribed due to {param} value: {patient_value}.")
+            return False
+
+    return True
+
+
     # Perform risk assessment
     risk_info = get_patient_risk_assessment(patient['PatientID'], medication_name)
     if risk_info is None:
