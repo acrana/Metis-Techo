@@ -87,8 +87,15 @@ text_patient_info.grid(row=1, column=0, columnspan=3, padx=10, pady=10)
 label_medication = tk.Label(root, text="Enter Medication to Prescribe:")
 label_medication.grid(row=2, column=0, padx=10, pady=10)
 
-entry_medication = tk.Entry(root)
-entry_medication.grid(row=2, column=1, padx=10, pady=10)
+# Create a selectable dropdown list for medications
+medication_options = list(medications.keys())  # Get all medication names as options
+selected_medication = tk.StringVar(root)
+selected_medication.set(medication_options[0])  # Set the default option
+
+# Create a dropdown (OptionMenu) for selecting a medication
+dropdown_medications = tk.OptionMenu(root, selected_medication, *medication_options)
+dropdown_medications.grid(row=2, column=1, padx=10, pady=10)
+
 
 # Button to prescribe medication
 btn_prescribe = tk.Button(root, text="Prescribe Medication", command=prescribe_medication)
