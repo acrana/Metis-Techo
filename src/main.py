@@ -11,29 +11,17 @@ def check_contraindications_gui(patient, medication_name):
     med_info = medications[medication_name]
     contraindications = med_info.get('Contraindications', {})
 
-    # Check all contraindications
+    # Check for contraindications
     for param, condition in contraindications.items():
         if param in patient['LabResults']:
             patient_value = patient['LabResults'][param]
             if condition(patient_value):
-                messagebox.showwarning("Contraindication Alert",
-                                       f"{medication_name} contraindicated due to {param} level of {patient_value}.")
-                return False
-
-    # Check for any monitoring parameters that need warnings
-    if 'MonitoringParameters' in med_info:
-        alerts = []
-        for param in med_info['MonitoringParameters']:
-            if param in patient['LabResults']:
-                patient_value = patient['LabResults'][param]
-                print(f"Monitoring {param}: Current value is {patient_value}.")
-            else:
-                alerts.append(f"{param} is missing in the patient data.")
-
-        if alerts:
-            messagebox.showwarning("Monitoring Warning", ', '.join(alerts))
-
-    return True
+                # Show a warning and ask the user if they want to proceed
+                proceed = messagebox.askyesno("Contraindication Alert",
+                                              f"{medication_name} is contraindicated due to {param} level of {patient_value}.\nDo you want to proceed?")
+                if not proceed:
+                    return False  # Stop the prescription if the user selects "No"
+    return True  # Proceed if no contraindications or user agrees
 
 # Function to prescribe medication with GUI notifications
 def prescribe_and_monitor_gui(patient, medication_name):
@@ -51,15 +39,25 @@ def prescribe_and_monitor_gui(patient, medication_name):
     patient['Medications'].append(medication_name)
     return True
 
-# Function to update patient lab results
+# Function to update patient lab results and issue warnings
 def update_patient_labs(patient, new_lab_results):
     # Update the patient's lab results with the new values
     patient['LabResults'].update(new_lab_results)
-    # After updating the lab results, check all medications again
-    for med in patient['Medications']:
-        monitor_patient_labs(patient, med)
 
-# Continuous monitoring function
+    # Recheck the patient's medications for any warnings due to updated lab results
+    for medication in patient['Medications']:
+        med_info = medications[medication]
+        monitoring_params = med_info.get('MonitoringParameters', [])
+
+        for param in monitoring_params:
+            if param in new_lab_results:
+                patient_value = new_lab_results[param]
+                # Check if the updated lab value exceeds the safe limit
+                if param == 'Creatinine' and patient_value > 2.0:
+                    messagebox.showwarning("Warning", f"Patient {patient['PatientID']} has elevated Creatinine ({patient_value}) while on {medication}. Please proceed with caution.")
+                # Add more conditions for other monitoring parameters as needed
+
+# Function to monitor patient labs continuously
 def monitor_patient_labs(patient, medication_name):
     med_info = medications[medication_name]
     monitoring_params = med_info.get('MonitoringParameters', [])
@@ -89,80 +87,8 @@ def display_patient_info(patient):
     info += f"Age: {patient['Age']}\n"
     info += f"Gender: {patient['Gender']}\n"
     info += f"Allergies: {', '.join(patient.get('Allergies', [])) if patient.get('Allergies') else 'None'}\n"
-    info += f"Medical History: {', '.join(patient.get('MedicalHistory', [])) if patient.get('MedicalHistory') else 'None'}\n"
-    info += "Lab Results:\n"
-    for lab, value in patient['LabResults'].items():
-        info += f"  {lab}: {value}\n"
-    info += f"Current Medications: {', '.join(patient['Medications']) if patient['Medications'] else 'None'}\n"
-    return info
+   
 
-# Main function to run the CDSS from the command-line
-def main():
-    while True:
-        print("""
-Clinical Decision Support System
-1. View Patient Information
-2. Prescribe Medication
-3. Update Lab Results
-4. Exit
-Enter choice:""")
-        choice = input().strip()
-
-        if choice == '1':
-            try:
-                patient_id = int(input("Enter Patient ID: ").strip())
-            except ValueError:
-                print("Invalid Patient ID. Please enter a number.")
-                continue
-            patient = find_patient(patient_id)
-            if patient:
-                print(display_patient_info(patient))
-            else:
-                print(f"Patient with ID {patient_id} not found.")
-
-        elif choice == '2':
-            try:
-                patient_id = int(input("Enter Patient ID: ").strip())
-            except ValueError:
-                print("Invalid Patient ID. Please enter a number.")
-                continue
-            patient = find_patient(patient_id)
-            if patient:
-                medication_name = input("Enter Medication Name: ").strip()
-                prescribe_and_monitor_gui(patient, medication_name)
-            else:
-                print(f"Patient with ID {patient_id} not found.")
-
-        elif choice == '3':
-            try:
-                patient_id = int(input("Enter Patient ID: ").strip())
-            except ValueError:
-                print("Invalid Patient ID. Please enter a number.")
-                continue
-            patient = find_patient(patient_id)
-            if patient:
-                print("Enter the updated lab results (e.g., QTc=490):")
-                new_lab_results = {}
-                while True:
-                    lab_input = input("Lab result (or type 'done' to finish): ").strip()
-                    if lab_input.lower() == 'done':
-                        break
-                    try:
-                        lab_name, lab_value = lab_input.split('=')
-                        new_lab_results[lab_name.strip()] = float(lab_value.strip())
-                    except ValueError:
-                        print("Invalid input. Please enter in 'LabName=Value' format.")
-                        continue
-                update_patient_labs(patient, new_lab_results)
-            else:
-                print(f"Patient with ID {patient_id} not found.")
-
-        elif choice == '4':
-            print("Exiting the application.")
-            break
-
-        else:
-            print("Invalid choice. Please try again.")
 
 if __name__ == '__main__':
     main()
