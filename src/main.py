@@ -87,8 +87,81 @@ def display_patient_info(patient):
     info += f"Age: {patient['Age']}\n"
     info += f"Gender: {patient['Gender']}\n"
     info += f"Allergies: {', '.join(patient.get('Allergies', [])) if patient.get('Allergies') else 'None'}\n"
-   
+    info += f"Medical History: {', '.join(patient.get('MedicalHistory', [])) if patient.get('MedicalHistory') else 'None'}\n"
+    info += "Lab Results:\n"
+    for lab, value in patient['LabResults'].items():
+        info += f"  {lab}: {value}\n"
+    info += f"Current Medications: {', '.join(patient['Medications']) if patient['Medications'] else 'None'}\n"
+    return info
 
+# Main function to run the CDSS from the command-line
+def main():
+    while True:
+        print("""
+Clinical Decision Support System
+1. View Patient Information
+2. Prescribe Medication
+3. Update Lab Results
+4. Exit
+Enter choice:""")
+        choice = input().strip()
+
+        if choice == '1':
+            try:
+                patient_id = int(input("Enter Patient ID: ").strip())
+            except ValueError:
+                print("Invalid Patient ID. Please enter a number.")
+                continue
+            patient = find_patient(patient_id)
+            if patient:
+                print(display_patient_info(patient))
+            else:
+                print(f"Patient with ID {patient_id} not found.")
+
+        elif choice == '2':
+            try:
+                patient_id = int(input("Enter Patient ID: ").strip())
+            except ValueError:
+                print("Invalid Patient ID. Please enter a number.")
+                continue
+            patient = find_patient(patient_id)
+            if patient:
+                medication_name = input("Enter Medication Name: ").strip()
+                prescribe_and_monitor_gui(patient, medication_name)
+            else:
+                print(f"Patient with ID {patient_id} not found.")
+
+        elif choice == '3':
+            try:
+                patient_id = int(input("Enter Patient ID: ").strip())
+            except ValueError:
+                print("Invalid Patient ID. Please enter a number.")
+                continue
+            patient = find_patient(patient_id)
+            if patient:
+                print("Enter the updated lab results (e.g., QTc=490):")
+                new_lab_results = {}
+                while True:
+                    lab_input = input("Lab result (or type 'done' to finish): ").strip()
+                    if lab_input.lower() == 'done':
+                        break
+                    try:
+                        lab_name, lab_value = lab_input.split('=')
+                        new_lab_results[lab_name.strip()] = float(lab_value.strip())
+                    except ValueError:
+                        print("Invalid input. Please enter in 'LabName=Value' format.")
+                        continue
+                update_patient_labs(patient, new_lab_results)
+            else:
+                print(f"Patient with ID {patient_id} not found.")
+
+        elif choice == '4':
+            print("Exiting the application.")
+            break
+
+        else:
+            print("Invalid choice. Please try again.")
 
 if __name__ == '__main__':
     main()
+
