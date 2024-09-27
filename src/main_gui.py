@@ -39,7 +39,9 @@ def prescribe_medication():
         messagebox.showerror("Error", "Please select a patient first.")
         return
 
-    medication_name = entry_medication.get().strip()
+   def prescribe_medication():
+    medication_name = selected_medication.get()  # Use the selected medication from the dropdown
+
     
     # Check if medication exists
     if medication_name in medications:
