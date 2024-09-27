@@ -11,6 +11,15 @@ root.title("AI CDSS - Clinical Decision Support System")
 # Global variable for the current patient
 current_patient = None
 
+# Create a selectable dropdown list for medications
+medication_options = list(medications.keys())  # Get all medication names as options
+selected_medication = tk.StringVar(root)
+selected_medication.set(medication_options[0])  # Set the default option
+
+# Create a dropdown (OptionMenu) for selecting a medication
+dropdown_medications = tk.OptionMenu(root, selected_medication, *medication_options)
+dropdown_medications.grid(row=2, column=1, padx=10, pady=10)
+
 # Function to display patient information
 def view_patient_info():
     patient_id = entry_patient_id.get()
@@ -33,17 +42,14 @@ def view_patient_info():
     else:
         messagebox.showerror("Error", "Please enter a valid patient ID.")
 
-# Function to prescribe medication with GUI notifications
+# Function to prescribe medication
 def prescribe_medication():
     if not current_patient:
         messagebox.showerror("Error", "Please select a patient first.")
         return
 
-   def prescribe_medication():
     medication_name = selected_medication.get()  # Use the selected medication from the dropdown
-
     
-    # Check if medication exists
     if medication_name in medications:
         # Run the prescription and monitoring logic
         if prescribe_and_monitor_gui(current_patient, medication_name):
@@ -70,50 +76,6 @@ def update_labs():
     except ValueError:
         messagebox.showerror("Error", "Please enter lab results in 'LabName=Value' format.")
 
-# Create labels and input fields for patient ID
-label_patient_id = tk.Label(root, text="Enter Patient ID:")
-label_patient_id.grid(row=0, column=0, padx=10, pady=10)
+# Create labels and input fields for patient
 
-entry_patient_id = tk.Entry(root)
-entry_patient_id.grid(row=0, column=1, padx=10, pady=10)
-
-# Button to view patient info
-btn_view_patient = tk.Button(root, text="View Patient Info", command=view_patient_info)
-btn_view_patient.grid(row=0, column=2, padx=10, pady=10)
-
-# Text box to display patient info
-text_patient_info = tk.Text(root, width=60, height=10, state=tk.DISABLED)
-text_patient_info.grid(row=1, column=0, columnspan=3, padx=10, pady=10)
-
-# Create labels and input fields for prescribing medication
-label_medication = tk.Label(root, text="Enter Medication to Prescribe:")
-label_medication.grid(row=2, column=0, padx=10, pady=10)
-
-# Create a selectable dropdown list for medications
-medication_options = list(medications.keys())  # Get all medication names as options
-selected_medication = tk.StringVar(root)
-selected_medication.set(medication_options[0])  # Set the default option
-
-# Create a dropdown (OptionMenu) for selecting a medication
-dropdown_medications = tk.OptionMenu(root, selected_medication, *medication_options)
-dropdown_medications.grid(row=2, column=1, padx=10, pady=10)
-
-
-# Button to prescribe medication
-btn_prescribe = tk.Button(root, text="Prescribe Medication", command=prescribe_medication)
-btn_prescribe.grid(row=2, column=2, padx=10, pady=10)
-
-# Create labels and input fields for lab results
-label_lab_results = tk.Label(root, text="Enter Lab Results (e.g., QTc=490):")
-label_lab_results.grid(row=3, column=0, padx=10, pady=10)
-
-entry_lab_results = tk.Entry(root)
-entry_lab_results.grid(row=3, column=1, padx=10, pady=10)
-
-# Button to update lab results
-btn_update_labs = tk.Button(root, text="Update Lab Results", command=update_labs)
-btn_update_labs.grid(row=3, column=2, padx=10, pady=10)
-
-# Run the application
-root.mainloop()
 
