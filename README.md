@@ -1,6 +1,6 @@
 # AI-CDSS
 
-# AI Clinical Decision Support System (CDSS)
+# AI Clinical Decision Support System 
 
 This project aims to develop an AI-driven Clinical Decision Support System (CDSS) to assist healthcare professionals in decision-making processes. This repository serves as a learning platform to explore and understand various tools and technologies such as Python, SQL, and TensorFlow.
 
@@ -16,18 +16,7 @@ The primary goal of this project is to learn and experiment with:
 
 
 
-By working on this project, I hope to gain hands-on experience with these technologies and eventually develop a functional CDSS.
-
-
-- **Patient Data Management**: Stores and manages patient demographics, survey results, and adverse drug event (ADE) records.
-
-- **Risk Prediction**: Uses a machine learning model to predict the risk of ADEs in patients.
-
-- **Interactive Command-Line Interface**: Allows users to interact with the system, view patient information, and assess risk.
-
-- **Data Preprocessing**: Implements data cleaning and preprocessing steps to prepare data for modeling.
-
-- **Modular Code Structure**: Organized codebase for easy understanding and extensibility.
+  Übersehenjisatsu
 
 
 
@@ -44,4 +33,4 @@ graph TD
     MT[Model Training model_training.py] -->|Saves Model to| ML
 
 
-Übersehenjisatsu
+
