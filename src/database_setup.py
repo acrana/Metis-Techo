@@ -16,7 +16,6 @@ def setup_database(num_patients=1000, num_medications=100, num_prescriptions=500
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
-    # Drop tables if they exist (to start fresh)
     cursor.execute("DROP TABLE IF EXISTS TBL_Demographics")
     cursor.execute("DROP TABLE IF EXISTS TBL_Survey")
     cursor.execute("DROP TABLE IF EXISTS TBL_ADERecords")
