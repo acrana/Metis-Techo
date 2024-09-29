@@ -214,29 +214,29 @@ class CDSSApp:
         threading.Thread(target=generate_and_display).start()
 
     def display_clinical_risk_scores(self):
-        # Clear previous risk scores
+        
         for widget in self.risk_frame.winfo_children():
             widget.destroy()
 
-        # Calculate and display cardiovascular risk score
+        
         cv_risk = calculate_cardiovascular_risk_score(self.selected_patient)
         if cv_risk['is_elevated']:
             cv_label = tk.Label(self.risk_frame, text=f"Cardiovascular Risk: {cv_risk['score']}%", fg='red')
             cv_label.pack(side=tk.LEFT, padx=10)
 
-        # Calculate and display renal risk score
+        
         renal_risk = calculate_renal_risk_score(self.selected_patient)
         if renal_risk['is_elevated']:
             renal_label = tk.Label(self.risk_frame, text=f"Renal Risk: {renal_risk['score']}%", fg='red')
             renal_label.pack(side=tk.LEFT, padx=10)
 
-        # Calculate and display lung risk score
+        
         lung_risk = calculate_lung_risk_score(self.selected_patient)
         if lung_risk['is_elevated']:
             lung_label = tk.Label(self.risk_frame, text=f"Lung Risk: {lung_risk['score']}%", fg='red')
             lung_label.pack(side=tk.LEFT, padx=10)
 
-        # Calculate and display liver risk score
+      
         liver_risk = calculate_liver_risk_score(self.selected_patient)
         if liver_risk['is_elevated']:
             liver_label = tk.Label(self.risk_frame, text=f"Liver Risk: {liver_risk['score']}%", fg='red')
@@ -500,7 +500,7 @@ def prescribe_medication_gui(patient, medication_name):
         return False
 
 
-# Function to generate recommendations based on patient data
+
 def generate_recommendations(patient):
     recommendations = []
     time.sleep(1)
@@ -528,7 +528,7 @@ def generate_recommendations(patient):
     return recommendations
 
 
-# Function to calculate cardiovascular risk score
+
 def calculate_cardiovascular_risk_score(patient):
     risk_factors = 0
     age = patient['Age']
@@ -548,7 +548,7 @@ def calculate_cardiovascular_risk_score(patient):
     return {'score': f"{risk_percentage:.0f}", 'is_elevated': risk_percentage > 25}
 
 
-# Function to calculate renal risk score
+
 def calculate_renal_risk_score(patient):
     risk_factors = 0
     creatinine = patient['LabResults'].get('Creatinine', 0)
@@ -562,7 +562,7 @@ def calculate_renal_risk_score(patient):
     return {'score': f"{risk_percentage:.0f}", 'is_elevated': risk_percentage > 25}
 
 
-# Function to calculate lung risk score
+
 def calculate_lung_risk_score(patient):
     risk_factors = 0
     fev1_fvc = patient['LabResults'].get('FEV1/FVC Ratio', 0)
@@ -575,7 +575,7 @@ def calculate_lung_risk_score(patient):
     risk_percentage = (risk_factors / 2) * 100
     return {'score': f"{risk_percentage:.0f}", 'is_elevated': risk_percentage > 25}
 
-# Function to calculate liver risk score
+
 def calculate_liver_risk_score(patient):
     risk_factors = 0
     liver_enzymes = patient['LabResults'].get('Liver Enzymes', 0)
@@ -590,42 +590,6 @@ def calculate_liver_risk_score(patient):
 
 
 
-def display_clinical_risk_scores(self):
-    # Clear previous risk scores
-    for widget in self.risk_frame.winfo_children():
-        widget.destroy()
-
-    # Calculate and display cardiovascular risk score
-    cv_risk = calculate_cardiovascular_risk_score(self.selected_patient)
-    if cv_risk['is_elevated']:
-        cv_label = tk.Label(self.risk_frame, text=f"Cardiovascular Risk: {cv_risk['score']}%", fg='red')
-        cv_label.pack(side=tk.LEFT, padx=10)
-        # Add tooltip for cardiovascular risk score
-        CreateToolTip(cv_label, "Cardiovascular Risk is calculated based on age, blood pressure, cholesterol (LDL), and smoking status.")
-
-    # Calculate and display renal risk score
-    renal_risk = calculate_renal_risk_score(self.selected_patient)
-    if renal_risk['is_elevated']:
-        renal_label = tk.Label(self.risk_frame, text=f"Renal Risk: {renal_risk['score']}%", fg='red')
-        renal_label.pack(side=tk.LEFT, padx=10)
-        # Add tooltip for renal risk score
-        CreateToolTip(renal_label, "Renal Risk is calculated based on creatinine and GFR levels.")
-
-    # Calculate and display lung risk score
-    lung_risk = calculate_lung_risk_score(self.selected_patient)
-    if lung_risk['is_elevated']:
-        lung_label = tk.Label(self.risk_frame, text=f"Lung Risk: {lung_risk['score']}%", fg='red')
-        lung_label.pack(side=tk.LEFT, padx=10)
-        # Add tooltip for lung risk score
-        CreateToolTip(lung_label, "Lung Risk is calculated based on FEV1/FVC ratio and history of COPD.")
-
-    # Calculate and display liver risk score
-    liver_risk = calculate_liver_risk_score(self.selected_patient)
-    if liver_risk['is_elevated']:
-        liver_label = tk.Label(self.risk_frame, text=f"Liver Risk: {liver_risk['score']}%", fg='red')
-        liver_label.pack(side=tk.LEFT, padx=10)
-        # Add tooltip for liver risk score
-        CreateToolTip(liver_label, "Liver Risk is calculated based on liver enzyme and bilirubin levels.")
 
 def create_widgets(self):
     # Add a basic label to test tooltips
