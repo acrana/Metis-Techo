@@ -1,0 +1,21 @@
+patient_id,medication,dosage,frequency
+1,DrugA,10mg,Once daily
+2,DrugB,20mg,Once daily
+3,DrugC,30mg,Once daily
+4,DrugA,10mg,Once daily
+5,DrugB,20mg,Once daily
+6,DrugC,30mg,Once daily
+7,DrugA,10mg,Once daily
+8,DrugB,20mg,Once daily
+9,DrugC,30mg,Once daily
+10,DrugA,10mg,Once daily
+11,DrugB,20mg,Once daily
+12,DrugC,30mg,Once daily
+13,DrugA,10mg,Once daily
+14,DrugB,20mg,Once daily
+15,DrugC,30mg,Once daily
+16,DrugA,10mg,Once daily
+17,DrugB,20mg,Once daily
+18,DrugC,30mg,Once daily
+19,DrugA,10mg,Once daily
+20,DrugB,20mg,Once daily

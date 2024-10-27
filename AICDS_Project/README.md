@@ -16,6 +16,9 @@ The primary goal of this project is to learn and experiment with:
 
 
 
+  Übersehenjisatsu
+
+
 
 ![GetImage](https://github.com/user-attachments/assets/2cc4101e-54b5-4b97-99b7-212758295f8b)
 ```mermaid
@@ -28,5 +31,6 @@ graph TD
     ML -->|Provides Risk Prediction to| RA
     RA -->|Returns Results to| UI
     MT[Model Training model_training.py] -->|Saves Model to| ML
+
 
 
