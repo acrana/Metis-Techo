@@ -1,0 +1,31 @@
+<!-- templates/alerts.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Active Alerts</h2>
+<table>
+    <tr>
+        <th>Patient Name</th>
+        <th>Medication</th>
+        <th>Lab Test</th>
+        <th>Alert Message</th>
+        <th>Alert Date</th>
+        <th>Action</th>
+    </tr>
+    {% for _, row in alerts.iterrows() %}
+    <tr>
+        <td>{{ row.patient_first }} {{ row.patient_last }}</td>
+        <td>{{ row.medication_name }}</td>
+        <td>{{ row.lab_test_name }}</td>
+        <td>{{ row.alert_message }}</td>
+        <td>{{ row.alert_date }}</td>
+        <td>
+            <form action="{{ url_for('resolve_alert', alert_id=row.alert_id) }}" method="POST">
+                <input type="text" name="action_taken" placeholder="Action Taken" required>
+                <button type="submit">Resolve</button>
+            </form>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+{% endblock %}

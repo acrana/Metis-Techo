@@ -1,0 +1,32 @@
+<!-- templates/new_order.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<h2>New Medication Order for Patient ID {{ patient_id }}</h2>
+<form method="POST">
+    <label for="medication_id">Medication:</label>
+    <select name="medication_id" id="medication_id" required>
+        {% for _, row in medications.iterrows() %}
+            <option value="{{ row.medication_id }}">{{ row.name }}</option>
+        {% endfor %}
+    </select><br><br>
+    
+    <label for="dosage">Dosage:</label>
+    <input type="text" name="dosage" id="dosage" required><br><br>
+    
+    <label for="frequency">Frequency:</label>
+    <input type="text" name="frequency" id="frequency" required><br><br>
+    
+    <label for="duration">Duration:</label>
+    <input type="text" name="duration" id="duration"><br><br>
+    
+    <label for="provider_id">Provider:</label>
+    <select name="provider_id" id="provider_id" required>
+        {% for _, row in providers.iterrows() %}
+            <option value="{{ row.provider_id }}">{{ row.first_name }} {{ row.last_name }} ({{ row.role }})</option>
+        {% endfor %}
+    </select><br><br>
+    
+    <button type="submit">Submit Order</button>
+</form>
+{% endblock %}

@@ -1,0 +1,24 @@
+<!-- templates/index.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Patients</h2>
+<table>
+    <tr>
+        <th>Name</th>
+        <th>Age</th>
+        <th>Gender</th>
+        <th>Contact</th>
+        <th>Actions</th>
+    </tr>
+    {% for _, row in patients.iterrows() %}
+    <tr>
+        <td>{{ row.first_name }} {{ row.last_name }}</td>
+        <td>{{ row.age }}</td>
+        <td>{{ row.gender }}</td>
+        <td>{{ row.phone }}</td>
+        <td><a href="{{ url_for('patient_detail', patient_id=row.patient_id) }}">View Details</a></td>
+    </tr>
+    {% endfor %}
+</table>
+{% endblock %}
