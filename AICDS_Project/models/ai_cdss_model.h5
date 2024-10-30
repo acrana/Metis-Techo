@@ -1,3 +1,0 @@
-# Save the model
-model.save('models/model.h5')
-print("Model training completed and saved.")
