@@ -3,55 +3,62 @@ import numpy as np
 from datetime import datetime, timedelta
 from typing import List, Dict, Any, Tuple
 from collections import defaultdict
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class EnhancedRiskPredictor:
-    def __init__(self, cdss_system, lookback_days: int = 1000):  # Increased lookback
+    def __init__(self, cdss_system, config: Dict[str, Any] = None):
         self.cdss = cdss_system
-        self.lookback_days = lookback_days
         
-        # Weights for different components
-        self.weights = {
-            'historical_ade': 0.35,  
-            'vital_trends': 0.25,    
-            'lab_trends': 0.40     # Increased because labs show clear issues
+        # Default configuration
+        default_config = {
+            'lookback_days': 1000,  # Increased lookback
+            'weights': {
+                'historical_ade': 0.35,  
+                'vital_trends': 0.25,    
+                'lab_trends': 0.40  # Increased because labs show clear issues
+            },
+            'decay_factors': {
+                'ade': 365,  # ADEs remain relevant for longer
+                'vitals': 30,      
+                'labs': 60
+            },
+            'medication_vital_concerns': {
+                'Metoprolol': ['heart_rate', 'blood_pressure_systolic', 'blood_pressure_diastolic'],
+                'Lisinopril': ['blood_pressure_systolic', 'blood_pressure_diastolic'],
+                'Amiodarone': ['heart_rate', 'blood_pressure_systolic'],
+                'Seroquel': ['heart_rate', 'blood_pressure_systolic'],
+                'Warfarin': []
+            },
+            'medication_lab_concerns': {
+                'Metoprolol': ['potassium', 'creatinine'],
+                'Lisinopril': ['potassium', 'creatinine'],
+                'Amiodarone': ['liver enzymes', 'thyroid function'],
+                'Warfarin': ['inr', 'hemoglobin'],
+                'Seroquel': ['blood glucose', 'liver enzymes']
+            }
         }
         
-        # Time decay factors (half-life in days) - Made less aggressive
-        self.decay_factors = {
-            'ade': 365,        # ADEs remain relevant for longer
-            'vitals': 30,      
-            'labs': 60
-        }
-
-        # Define medication-specific monitoring parameters
-        self.MEDICATION_VITAL_CONCERNS = {
-            'Metoprolol': ['heart_rate', 'blood_pressure_systolic', 'blood_pressure_diastolic'],
-            'Lisinopril': ['blood_pressure_systolic', 'blood_pressure_diastolic'],
-            'Amiodarone': ['heart_rate', 'blood_pressure_systolic'],
-            'Seroquel': ['heart_rate', 'blood_pressure_systolic'],
-            'Warfarin': []
-        }
-
-        self.MEDICATION_LAB_CONCERNS = {
-            'Metoprolol': ['potassium', 'creatinine'],
-            'Lisinopril': ['potassium', 'creatinine'],
-            'Amiodarone': ['liver enzymes', 'thyroid function'],
-            'Warfarin': ['inr', 'hemoglobin'],
-            'Seroquel': ['blood glucose', 'liver enzymes']
-        }
+        # Update with custom config if provided
+        if config:
+            default_config.update(config)
+        
+        self.config = default_config
 
     def calculate_time_weight(self, days_ago: float, category: str) -> float:
         """Calculate time-based weight using exponential decay"""
-        half_life = self.decay_factors[category]
+        half_life = self.config['decay_factors'][category]
         decay_constant = np.log(2) / half_life
         return np.exp(-decay_constant * days_ago)
 
     def analyze_historical_ades(self, patient_id: str, medication: str) -> Tuple[float, List[Dict]]:
         """Analyze historical ADEs with sophisticated pattern matching"""
         cursor = self.cdss.conn.cursor()
-        cutoff_date = (datetime.now() - timedelta(days=self.lookback_days)).isoformat()
+        cutoff_date = (datetime.now() - timedelta(days=self.config['lookback_days'])).isoformat()
         
-        # Get medication class and related medications
+        # Get related medications
         cursor.execute("""
             SELECT m1.type as med_type, m2.medication_id, m2.name
             FROM Medications m1
@@ -62,7 +69,7 @@ class EnhancedRiskPredictor:
         med_class = related_meds[0]['med_type'] if related_meds else None
         related_med_ids = [row['medication_id'] for row in related_meds]
 
-        # Get medication mechanism/class mapping
+        # Mechanism-related terms
         mechanism_related = {
             'Metoprolol': ['bradycardia', 'hypotension', 'heart rate', 'blood pressure'],
             'Amiodarone': ['bradycardia', 'qtc', 'prolongation', 'heart rate'],
@@ -92,18 +99,15 @@ class EnhancedRiskPredictor:
         risk_score = 0.0
         relevant_ades = []
         
-        # Get related terms for this medication
         related_terms = mechanism_related.get(medication, [])
         
         for ade in ade_history:
             days_ago = (datetime.now() - datetime.fromisoformat(ade['timestamp'])).days
             time_weight = self.calculate_time_weight(days_ago, 'ade')
             
-            # Calculate mechanism relevance
             desc_lower = ade['description'].lower()
             mechanism_match = any(term in desc_lower for term in related_terms)
             
-            # Calculate medication relevance
             if ade['med_name'] == medication:
                 relevance = 1.0  # Exact same medication
             elif mechanism_match:
@@ -115,25 +119,19 @@ class EnhancedRiskPredictor:
             else:
                 relevance = 0.2  # Other medication
             
-            # Calculate severity based on description
             severity = 1.0
             if any(term in desc_lower for term in ['severe', 'critical', 'emergency']):
                 severity = 2.0
             elif any(term in desc_lower for term in ['moderate', 'significant']):
                 severity = 1.5
             
-            # Additional weight if the ADE wasn't resolved
             if not ade['resolved']:
                 severity *= 1.5
             
-            # Calculate final event score
             event_score = time_weight * relevance * severity
-            
-            # Update maximum risk score
             risk_score = max(risk_score, event_score)
             
-            # Add to relevant ADEs if significant
-            if event_score > 0.2:  # Lowered threshold to catch more events
+            if event_score > 0.2:
                 relevant_ades.append({
                     'timestamp': ade['timestamp'],
                     'medication': ade['med_name'],
@@ -149,13 +147,11 @@ class EnhancedRiskPredictor:
         cursor = self.cdss.conn.cursor()
         cutoff_date = (datetime.now() - timedelta(days=90)).isoformat()
         
-        # Get relevant vital signs for this medication
-        vital_concerns = self.MEDICATION_VITAL_CONCERNS.get(medication, [])
+        vital_concerns = self.config['medication_vital_concerns'].get(medication, [])
         
         if not vital_concerns:
             return 0.0, {}
         
-        # Get vital history
         cursor.execute("""
             SELECT *
             FROM Vitals
@@ -168,14 +164,12 @@ class EnhancedRiskPredictor:
         if not vital_history:
             return 0.0, {}
         
-        # Get vital ranges
         cursor.execute("SELECT * FROM Vital_Ranges")
         vital_ranges = {row['vital_name']: dict(row) for row in cursor.fetchall()}
         
         trends = defaultdict(list)
         risk_scores = defaultdict(float)
         
-        # Analyze each vital sign
         for vital in vital_history:
             timestamp = datetime.fromisoformat(vital['timestamp'])
             days_ago = (datetime.now() - timestamp).days
@@ -192,7 +186,6 @@ class EnhancedRiskPredictor:
                         min_normal = float(ranges['min_normal'])
                         max_normal = float(ranges['max_normal'])
                         
-                        # Calculate risk score based on value ranges
                         if value <= critical_min or value >= critical_max:
                             deviation = 1.0
                             severity_factor = 2.0
@@ -219,7 +212,6 @@ class EnhancedRiskPredictor:
                             'deviation': weighted_score
                         })
         
-        # Calculate overall vital risk score
         max_risk = max(risk_scores.values()) if risk_scores else 0.0
         
         return max_risk, dict(trends)
@@ -229,12 +221,11 @@ class EnhancedRiskPredictor:
         cursor = self.cdss.conn.cursor()
         cutoff_date = (datetime.now() - timedelta(days=180)).isoformat()
         
-        lab_concerns = self.MEDICATION_LAB_CONCERNS.get(medication, [])
+        lab_concerns = self.config['medication_lab_concerns'].get(medication, [])
         
         if not lab_concerns:
             return 0.0, {}
         
-        # Get lab history
         placeholders = ','.join('?' for _ in lab_concerns)
         cursor.execute(f"""
             SELECT lr.*, l.lab_name
@@ -251,7 +242,6 @@ class EnhancedRiskPredictor:
         if not lab_history:
             return 0.0, {}
         
-        # Get lab ranges
         cursor.execute("SELECT * FROM Lab_Ranges")
         lab_ranges = {row['lab_name'].lower(): dict(row) for row in cursor.fetchall()}
         
@@ -301,7 +291,7 @@ class EnhancedRiskPredictor:
                         'deviation': weighted_score
                     })
             except (ValueError, TypeError) as e:
-                print(f"Error processing lab value: {e}")
+                logger.error(f"Error processing lab value: {e}")
                 continue
         
         max_risk = max(risk_scores.values()) if risk_scores else 0.0
@@ -311,36 +301,33 @@ class EnhancedRiskPredictor:
     def calculate_combined_risk(self, patient_id: str, medication: str) -> Dict[str, Any]:
         """Calculate comprehensive risk assessment with detailed breakdown"""
         
-        # Get component scores
         ade_score, ade_details = self.analyze_historical_ades(patient_id, medication)
         vital_score, vital_trends = self.analyze_vital_trends(patient_id, medication)
         lab_score, lab_trends = self.analyze_lab_trends(patient_id, medication)
         
-        # Calculate weighted total risk
         total_risk = (
-            ade_score * self.weights['historical_ade'] +
-            vital_score * self.weights['vital_trends'] +
-            lab_score * self.weights['lab_trends']
+            ade_score * self.config['weights']['historical_ade'] +
+            vital_score * self.config['weights']['vital_trends'] +
+            lab_score * self.config['weights']['lab_trends']
         )
         
-        # Prepare detailed assessment
         assessment = {
             'total_risk_score': total_risk,
             'risk_level': self._get_risk_level(total_risk),
             'components': {
                 'historical_ades': {
                     'score': ade_score,
-                    'weight': self.weights['historical_ade'],
+                    'weight': self.config['weights']['historical_ade'],
                     'details': ade_details
                 },
                 'vital_trends': {
                     'score': vital_score,
-                    'weight': self.weights['vital_trends'],
+                    'weight': self.config['weights']['vital_trends'],
                     'trends': vital_trends
                 },
                 'lab_trends': {
                     'score': lab_score,
-                    'weight': self.weights['lab_trends'],
+                    'weight': self.config['weights']['lab_trends'],
                     'trends': lab_trends
                 }
             },
@@ -364,7 +351,6 @@ class EnhancedRiskPredictor:
         """Extract key risk factors from assessment"""
         risk_factors = []
         
-        # Check historical ADEs
         for ade in assessment['components']['historical_ades']['details']:
             if ade['score'] > 0.3:
                 risk_factors.append({
@@ -374,7 +360,6 @@ class EnhancedRiskPredictor:
                     'timestamp': ade['timestamp']
                 })
         
-        # Check vital trends
         vital_trends = assessment['components']['vital_trends']['trends']
         for vital, readings in vital_trends.items():
             high_deviations = [r for r in readings if r['deviation'] > 0.5]
@@ -386,7 +371,6 @@ class EnhancedRiskPredictor:
                     'details': f"{len(high_deviations)} concerning readings"
                 })
         
-        # Check lab trends
         lab_trends = assessment['components']['lab_trends']['trends']
         for lab, readings in lab_trends.items():
             high_deviations = [r for r in readings if r['deviation'] > 0.5]
