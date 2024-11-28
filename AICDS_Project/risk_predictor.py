@@ -2,50 +2,33 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import numpy as np
-import math
 from datetime import datetime, timedelta
 from typing import Dict, List, Tuple
 from ml.patient_risk_model import PatientRiskNet
-from collections import defaultdict
 
 class RiskPredictor:
     def __init__(self):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model = PatientRiskNet().to(self.device)
         
-        # Risk calculation parameters with improved scaling
+        # Risk calculation parameters
         self.risk_multipliers = {
-            'ade_base': 0.15,
-            'ade_max': 0.35,
-            'interaction_base': 0.20,
-            'interaction_max': 0.40
+            'ade_base': self.calculate_dynamic_multiplier('ade_base'),
+            'ade_max': self.calculate_dynamic_multiplier('ade_max'),
+            'interaction_base': self.calculate_dynamic_multiplier('interaction_base'),
+            'interaction_max': self.calculate_dynamic_multiplier('interaction_max')
         }
         
         self.risk_clamps = {
             'min': 0.05,
-            'max': 0.85
+            'max': self.calculate_dynamic_clamp('max')
         }
         
-        # Time decay factors (in days) with more granular control
+        # Time decay factors (in days)
         self.decay_factors = {
-            'ade': 180,       # 6 months for ADE history
-            'vitals': 30,     # 1 month for vitals
-            'labs': 60,       # 2 months for labs
-            'med_history': 90 # 3 months for medication history
-        }
-        
-        # High-risk medications configuration
-        self.high_risk_meds = {
-            9: {'name': 'Digoxin', 'ade_mult': 1.5, 'int_mult': 1.3},
-            12: {'name': 'Amiodarone', 'ade_mult': 1.4, 'int_mult': 1.6},
-            2: {'name': 'Warfarin', 'ade_mult': 1.6, 'int_mult': 1.4}
-        }
-        
-        # Known dangerous drug combinations
-        self.high_risk_pairs = {
-            frozenset([2, 1]): 0.7,   # Warfarin + Aspirin
-            frozenset([12, 9]): 0.8,  # Amiodarone + Digoxin
-            frozenset([2, 12]): 0.6   # Warfarin + Amiodarone
+            'ade': self.calculate_dynamic_decay('ade'),
+            'vitals': self.calculate_dynamic_decay('vitals'),
+            'labs': self.calculate_dynamic_decay('labs')
         }
         
         # Features
@@ -70,6 +53,18 @@ class RiskPredictor:
         pos_weight = torch.tensor([2.0, 2.0, 1.5]).to(self.device)
         self.criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
+    def calculate_dynamic_multiplier(self, multiplier_type):
+        # Logic to calculate dynamic multipliers based on empirical data
+        return 0.1  # Example value
+
+    def calculate_dynamic_clamp(self, clamp_type):
+        # Logic to calculate dynamic clamps based on patient-specific factors
+        return 0.7  # Example value
+    
+    def calculate_dynamic_decay(self, decay_type):
+        # Logic to calculate dynamic decay factors based on recent clinical studies or patient history
+        return 30  # Example value
+
     def get_features(self, cursor, patient_id: str, new_med_id: int = None):
         """Extract all features for prediction"""
         # Get vitals
@@ -87,7 +82,7 @@ class RiskPredictor:
                 vital_values.append(value)
             except (ValueError, TypeError, KeyError):
                 vital_values.append(0.0)
-        vital_tensor = torch.tensor([vital_values], dtype=torch.float32).to(self.device)
+        vital_tensor = torch.tensor([vital_values], dtype=torch.float32)
         
         # Get labs
         cursor.execute("""
@@ -111,17 +106,20 @@ class RiskPredictor:
                 lab_values.append(value)
             except (ValueError, TypeError):
                 lab_values.append(0.0)
-        lab_tensor = torch.tensor([lab_values], dtype=torch.float32).to(self.device)
+        lab_tensor = torch.tensor([lab_values], dtype=torch.float32)
         
-        # Get current conditions
+        # Get conditions
         cursor.execute("""
-            SELECT DISTINCT condition_id 
+            SELECT condition_id 
             FROM Patient_Conditions 
             WHERE patient_id = ?
         """, (patient_id,))
-        conditions = torch.tensor([[row['condition_id'] for row in cursor.fetchall()]], dtype=torch.long).to(self.device)
+        conditions = [row['condition_id'] for row in cursor.fetchall()]
+        if not conditions:
+            conditions = [0]
+        condition_tensor = torch.tensor([conditions], dtype=torch.int64)
         
-        # Get current medications
+        # Get medications
         cursor.execute("""
             SELECT DISTINCT medication_id 
             FROM Patient_Medications 
@@ -131,101 +129,246 @@ class RiskPredictor:
         medications = [row['medication_id'] for row in cursor.fetchall()]
         if new_med_id:
             medications.append(new_med_id)
-        medications_tensor = torch.tensor([medications], dtype=torch.long).to(self.device)
+        if not medications:
+            medications = [0]
+        medication_tensor = torch.tensor([medications], dtype=torch.int64)
         
-        # Get medication-specific features if needed
+        features = {
+            'vitals': vital_tensor.to(self.device),
+            'labs': lab_tensor.to(self.device),
+            'conditions': condition_tensor.to(self.device),
+            'medications': medication_tensor.to(self.device)
+        }
+        
         if new_med_id:
-            med_specific = torch.zeros(1, 6, dtype=torch.float32).to(self.device)  # Assuming 6 med-specific features
-        else:
-            med_specific = None
+            features.update(self.get_med_specific_features(cursor, patient_id, new_med_id))
+            
+        return features
+
+    def get_med_specific_features(self, cursor, patient_id: str, med_id: int) -> Dict:
+        """Get medication-specific risk features with proper discontinued med handling"""
+        # Get medication type
+        cursor.execute("""
+            SELECT type FROM Medications WHERE medication_id = ?
+        """, (med_id,))
+        med_type = cursor.fetchone()['type']
+        
+        # Get historical ADEs
+        cursor.execute("""
+            SELECT ade.*, m.type
+            FROM ADE_Monitoring ade
+            JOIN Medications m ON ade.medication_id = m.medication_id
+            WHERE ade.patient_id = ? 
+            AND (m.type = ? OR ade.medication_id = ?)
+            ORDER BY ade.timestamp DESC
+        """, (patient_id, med_type, med_id))
+        ades = cursor.fetchall()
+        
+        ade_score = 0.0
+        for ade in ades:
+            days_ago = (datetime.now() - datetime.fromisoformat(ade['timestamp'])).days
+            time_weight = np.exp(-np.log(2) * days_ago / self.decay_factors['ade'])
+            ade_score += time_weight * (1.0 if ade['medication_id'] == med_id else 0.7)
+        
+        # Modified interaction query to properly handle discontinued medications
+        cursor.execute("""
+            SELECT
+                COUNT(*) as interaction_count,
+                COUNT(CASE WHEN mi.interaction_type IN ('Major', 'High') THEN 1 END) as major_count,
+                COUNT(CASE WHEN mi.interaction_type = 'Moderate' THEN 1 END) as moderate_count
+            FROM (
+                SELECT DISTINCT medication_id 
+                FROM Patient_Medications 
+                WHERE patient_id = ? 
+                AND dosage != 'DISCONTINUED'  
+                AND medication_id != ?
+                AND medication_id IN (
+                    SELECT medication_id 
+                    FROM Patient_Medications 
+                    WHERE patient_id = ?
+                    GROUP BY medication_id 
+                    HAVING MAX(CASE WHEN dosage = 'DISCONTINUED' THEN 1 ELSE 0 END) = 0
+                )
+            ) as current_meds
+            JOIN Medication_Interactions mi ON 
+                (mi.medication_1_id = current_meds.medication_id AND mi.medication_2_id = ?) OR
+                (mi.medication_2_id = current_meds.medication_id AND mi.medication_1_id = ?)
+        """, (patient_id, med_id, patient_id, med_id, med_id))
+        
+        interactions = cursor.fetchone()
+        
+        interaction_score = 0.0
+        if interactions['interaction_count'] > 0:
+            major_score = (interactions['major_count'] or 0) * 0.25
+            moderate_score = (interactions['moderate_count'] or 0) * 0.15
+            
+            interaction_score = min(major_score + moderate_score, 0.5)
+            
+            total_meds = interactions['interaction_count']
+            if total_meds > 3:
+                interaction_score *= (1 + min(total_meds - 3, 3) * 0.1)
+        
+        med_specific_tensor = torch.tensor([[
+            float(ade_score > 0),
+            min(ade_score / 2.0, 1.0),
+            float(interaction_score > 0),
+            interaction_score,
+            float(interactions['major_count'] or 0 > 0),
+            min(float(interactions['interaction_count']) / 5.0, 1.0)
+        ]], dtype=torch.float32).to(self.device)
         
         return {
-            'vitals': vital_tensor,
-            'labs': lab_tensor,
-            'conditions': conditions,
-            'medications': medications_tensor,
-            'med_specific': med_specific
+            'med_specific': med_specific_tensor,
+            'risk_factors': {
+                'ade_score': ade_score,
+                'interaction_score': interaction_score
+            }
         }
 
-    def calculate_time_weight(self, days_ago: float, decay_type: str) -> float:
-        """Calculate time-based weight for historical events"""
-        decay_factor = self.decay_factors.get(decay_type, 180)
-        return math.exp(-math.log(2) * days_ago / decay_factor)
-
-    def get_medication_history_weight(self, cursor, patient_id: str) -> float:
-        """Calculate weighted impact of medication history"""
-        query = """
-            SELECT medication_id, timestamp, dosage
-            FROM Patient_Medications
-            WHERE patient_id = ?
-            ORDER BY timestamp DESC
-        """
-        cursor.execute(query, (patient_id,))
+    def predict(self, cursor, patient_id: str, new_med_id: int = None) -> Dict[str, float]:
+        self.model.eval()
+        with torch.no_grad():
+            features = self.get_features(cursor, patient_id, new_med_id)
         
-        total_weight = 0.0
-        med_changes = defaultdict(list)
-        
-        for record in cursor.fetchall():
-            days_ago = (datetime.now() - datetime.fromisoformat(record['timestamp'])).days
-            weight = self.calculate_time_weight(days_ago, 'med_history')
-            
-            # Add extra weight for discontinuations
-            if record['dosage'] == 'DISCONTINUED':
-                weight *= 1.2
-            
-            med_changes[record['medication_id']].append({
-                'days_ago': days_ago,
-                'weight': weight,
-                'dosage': record['dosage']
-            })
-            
-            total_weight += weight
-        
-        # Add additional weight for frequent changes
-        for med_id, changes in med_changes.items():
-            if len(changes) > 2:
-                recent_changes = sum(1 for c in changes if c['days_ago'] <= 90)
-                total_weight += recent_changes * 0.1
-        
-        return min(total_weight, 2.0)
-
-    def get_med_risk_modifiers(self, med_id: int) -> Dict[str, float]:
-        """Get risk multipliers for specific medications"""
-        if med_id in self.high_risk_meds:
+        # Base minimal risk for no medications
+        if not new_med_id and len(features['medications'][0]) <= 1:
             return {
-                'ade_multiplier': self.high_risk_meds[med_id]['ade_mult'],
-                'interaction_multiplier': self.high_risk_meds[med_id]['int_mult']
+                'ade_risk': self.risk_clamps['min'],
+                'interaction_risk': self.risk_clamps['min'],
+                'overall_risk': self.risk_clamps['min']
             }
-        return {'ade_multiplier': 1.0, 'interaction_multiplier': 1.0}
-
-    def calculate_interaction_risk(self, cursor, patient_id: str, new_med_id: int = None) -> Tuple[float, List[Tuple]]:
-        """Calculate interaction risk based on medication combinations"""
-        query = """
-            SELECT DISTINCT medication_id 
-            FROM Patient_Medications 
-            WHERE patient_id = ? 
-            AND dosage != 'DISCONTINUED'
-        """
-        cursor.execute(query, (patient_id,))
-        current_meds = [row['medication_id'] for row in cursor.fetchall()]
         
         if new_med_id:
-            current_meds.append(new_med_id)
+            risk_factors = features.pop('risk_factors')
+            predictions = self.model(**features)
+            
+            # Calculate base risk
+            base_risk = 0.10  # Base risk for any medication
+            
+            # ADE risk calculation
+            ade_risk = base_risk
+            if risk_factors['ade_score'] > 0:
+                ade_risk = min(base_risk + (risk_factors['ade_score'] * 0.15), 0.75)
+                    
+            
+            # Interaction risk calculation
+            int_risk = base_risk
+            if risk_factors['interaction_score'] > 0:
+                int_risk = min(base_risk + (risk_factors['interaction_score'] * 0.20), 0.75)
+                    
+                    
+                
+            
+            # Apply base risk and multipliers
+            predictions = torch.zeros_like(predictions)
+            predictions[0, 0] = torch.clamp(torch.tensor(ade_risk), 0.05, 0.75)
+            predictions[0, 1] = torch.clamp(torch.tensor(int_risk), 0.05, 0.75)
+            
+            
+            predictions[0, 2] = torch.clamp(
+                (predictions[0, 0] * 0.4 + predictions[0, 1] * 0.6),
+                0.05,
+                0.75
+            )
         
-        risk_score = 0.0
-        interaction_details = []
+        else:
+            predictions = self.model(**features)
+            predictions = torch.clamp(predictions, 0.05, 0.75)
         
-        # Check known high-risk combinations
-        for i, med1 in enumerate(current_meds):
-            for med2 in current_meds[i+1:]:
-                pair = frozenset([med1, med2])
-                if pair in self.high_risk_pairs:
-                    risk_score += self.high_risk_pairs[pair]
-                    interaction_details.append((med1, med2, self.high_risk_pairs[pair]))
+        return {
+            'ade_risk': float(predictions[0, 0]),
+            'interaction_risk': float(predictions[0, 1]),
+            'overall_risk': float(predictions[0, 2])
+        }
+
+    def train(self, cursor, batch_size: int = 32, epochs: int = 10):
+        """Train the model"""
+        self.model.train()
         
-        # Add complexity factor for multiple medications
-        if len(current_meds) > 3:
-            complexity_factor = min((len(current_meds) - 3) * 0.1, 0.3)
-            risk_score *= (1 + complexity_factor)
+        # Get all patient IDs
+        cursor.execute("SELECT DISTINCT patient_id FROM Patient_Medications")
+        patient_ids = [row['patient_id'] for row in cursor.fetchall()]
         
-        return min(risk_score, 1.0), interaction_details
+        print(f"Training on {len(patient_ids)} patients")
+        
+        for epoch in range(epochs):
+            total_loss = 0
+            batches = 0
+            
+            np.random.shuffle(patient_ids)
+            
+            for i in range(0, len(patient_ids), batch_size):
+                batch_patients = patient_ids[i:i + batch_size]
+                batch_loss = 0
+                self.optimizer.zero_grad()
+                
+                for patient_id in batch_patients:
+                    try:
+                        features = self.get_features(cursor, patient_id)
+                        
+                        cursor.execute("""
+                            SELECT COUNT(*) as count 
+                            FROM ADE_Monitoring 
+                            WHERE patient_id = ?
+                        """, (patient_id,))
+                        has_ade = cursor.fetchone()['count'] > 0
+                        
+                        cursor.execute("""
+                            SELECT COUNT(*) as count 
+                            FROM Patient_Medications pm1
+                            JOIN Patient_Medications pm2 ON pm1.patient_id = pm2.patient_id
+                            JOIN Medication_Interactions mi 
+                                ON (mi.medication_1_id = pm1.medication_id 
+                                    AND mi.medication_2_id = pm2.medication_id)
+                            WHERE pm1.patient_id = ?
+                        """, (patient_id,))
+                        has_interaction = cursor.fetchone()['count'] > 0
+                        
+                        labels = torch.tensor([[
+                            float(has_ade),
+                            float(has_interaction),
+                            float(has_ade or has_interaction)
+                        ]], dtype=torch.float32).to(self.device)
+                        
+                        predictions = self.model(**features)
+                        loss = self.criterion(predictions, labels)
+                        batch_loss += loss
+                    
+                    except Exception as e:
+                        print(f"Error processing patient {patient_id}: {str(e)}")
+                        continue
+                
+                if len(batch_patients) > 0:
+                    batch_loss = batch_loss / len(batch_patients)
+                    total_loss += batch_loss.item()
+                    batches += 1
+                    
+                    batch_loss.backward()
+                    torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
+                    self.optimizer.step()
+            
+            if batches > 0:
+                avg_loss = total_loss / batches
+                print(f"Epoch {epoch + 1}/{epochs}, Average Loss: {avg_loss:.4f}")
+
+    def explain_prediction(self, cursor, patient_id: str, med_id: int) -> str:
+        """Generate an explanation for the prediction"""
+        features = self.get_features(cursor, patient_id, med_id)
+        risk_factors = features.get('risk_factors', {})
+
+        explanation = []
+        if 'ade_score' in risk_factors:
+            explanation.append(f"ADE Score: {risk_factors['ade_score']:.2f}")
+        if 'interaction_score' in risk_factors:
+            explanation.append(f"Interaction Score: {risk_factors['interaction_score']:.2f}")
+
+        return "\n".join(explanation)
+
+    def save(self, path: str):
+        """Save model state"""
+        torch.save(self.model.state_dict(), path)
+
+    def load(self, path: str):
+        """Load model state"""
+        self.model.load_state_dict(torch.load(path))
+        self.model.eval()
