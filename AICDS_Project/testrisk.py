@@ -232,22 +232,21 @@ class RiskPredictor:
 
     def predict(self, cursor, patient_id: str, new_med_id: int = None) -> Dict[str, float]:
         """Generate risk predictions with improved calculation"""
-        self.model.eval()
-        with torch.no_grad():
-            # Get base features
-            base_features = self.get_features(cursor, patient_id, new_med_id)
-            
-            # Calculate medication history impact
-            med_history_weight = self.get_medication_history_weight(cursor, patient_id)
-            
-            # Get interaction risk
-            interaction_risk, interaction_details = self.calculate_interaction_risk(
-                cursor, patient_id, new_med_id
-            )
-            
-            # Calculate base risks using the model
-            try:
-                # Convert features to model input format
+        try:
+            self.model.eval()
+            with torch.no_grad():
+                # Get base features
+                base_features = self.get_features(cursor, patient_id, new_med_id)
+                
+                # Calculate medication history impact
+                med_history_weight = self.get_medication_history_weight(cursor, patient_id)
+                
+                # Get interaction risk
+                interaction_risk, interaction_details = self.calculate_interaction_risk(
+                    cursor, patient_id, new_med_id
+                )
+                
+                # Calculate base risks using the model
                 model_input = {
                     'vitals': base_features['vitals'],
                     'labs': base_features['labs'],
@@ -269,9 +268,4 @@ class RiskPredictor:
                     ade_risk = min(ade_risk * (1 + med_history_weight * 0.2), self.risk_clamps['max'])
                     
                     # Adjust interaction risk
-                    base_interaction = float(base_predictions[0, 1])
-                    modified_interaction = base_interaction * risk_modifiers['interaction_multiplier']
-                    final_interaction = max(modified_interaction, interaction_risk)
-                    
-                    # Calculate overall risk
-                    overall
+                    base_interaction
