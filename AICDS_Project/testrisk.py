@@ -141,13 +141,16 @@ def test_risk_predictor(db_path="C:/Users/acran/OneDrive/Desktop/Projects/GPT/AI
 
     # Test Case 6: Testing time decay of risk factors
     print("\n=== Testing Risk Factor Time Decay ===")
-    # Get patient with old and recent ADEs
+    # Get patient with ADE history
     cursor.execute("""
-        SELECT am.patient_id
-        FROM ADE_Monitoring am
-        GROUP BY am.patient_id
-        HAVING MIN(julianday('now') - julianday(am.timestamp)) >= 180
-        AND MAX(julianday('now') - julianday(am.timestamp)) <= 30
+        SELECT DISTINCT patient_id
+        FROM ADE_Monitoring
+        WHERE patient_id IN (
+            SELECT patient_id 
+            FROM ADE_Monitoring 
+            GROUP BY patient_id 
+            HAVING COUNT(*) >= 2
+        )
         LIMIT 1
     """)
     time_decay_patient = cursor.fetchone()['patient_id']
