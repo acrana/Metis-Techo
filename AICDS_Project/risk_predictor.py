@@ -70,6 +70,83 @@ class RiskPredictor:
         pos_weight = torch.tensor([2.0, 2.0, 1.5]).to(self.device)
         self.criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
+    def get_features(self, cursor, patient_id: str, new_med_id: int = None):
+        """Extract all features for prediction"""
+        # Get vitals
+        cursor.execute("""
+            SELECT * FROM Vitals 
+            WHERE patient_id = ? 
+            ORDER BY timestamp DESC LIMIT 1
+        """, (patient_id,))
+        vitals = cursor.fetchone() or {}
+        
+        vital_values = []
+        for name in self.vital_names:
+            try:
+                value = float(vitals[name] if vitals else 0)
+                vital_values.append(value)
+            except (ValueError, TypeError, KeyError):
+                vital_values.append(0.0)
+        vital_tensor = torch.tensor([vital_values], dtype=torch.float32).to(self.device)
+        
+        # Get labs
+        cursor.execute("""
+            SELECT l.lab_name, lr.result
+            FROM Lab_Results lr
+            JOIN Labs l ON lr.lab_id = l.lab_id
+            WHERE lr.patient_id = ?
+            AND lr.timestamp = (
+                SELECT MAX(timestamp) 
+                FROM Lab_Results 
+                WHERE lab_id = lr.lab_id 
+                AND patient_id = lr.patient_id
+            )
+        """, (patient_id,))
+        labs = {row['lab_name']: row['result'] for row in cursor.fetchall()}
+        
+        lab_values = []
+        for name in self.lab_names:
+            try:
+                value = float(labs.get(name, 0))
+                lab_values.append(value)
+            except (ValueError, TypeError):
+                lab_values.append(0.0)
+        lab_tensor = torch.tensor([lab_values], dtype=torch.float32).to(self.device)
+        
+        # Get current conditions
+        cursor.execute("""
+            SELECT DISTINCT condition_id 
+            FROM Patient_Conditions 
+            WHERE patient_id = ?
+        """, (patient_id,))
+        conditions = torch.tensor([[row['condition_id'] for row in cursor.fetchall()]], dtype=torch.long).to(self.device)
+        
+        # Get current medications
+        cursor.execute("""
+            SELECT DISTINCT medication_id 
+            FROM Patient_Medications 
+            WHERE patient_id = ? 
+            AND dosage != 'DISCONTINUED'
+        """, (patient_id,))
+        medications = [row['medication_id'] for row in cursor.fetchall()]
+        if new_med_id:
+            medications.append(new_med_id)
+        medications_tensor = torch.tensor([medications], dtype=torch.long).to(self.device)
+        
+        # Get medication-specific features if needed
+        if new_med_id:
+            med_specific = torch.zeros(1, 6, dtype=torch.float32).to(self.device)  # Assuming 6 med-specific features
+        else:
+            med_specific = None
+        
+        return {
+            'vitals': vital_tensor,
+            'labs': lab_tensor,
+            'conditions': conditions,
+            'medications': medications_tensor,
+            'med_specific': med_specific
+        }
+
     def calculate_time_weight(self, days_ago: float, decay_type: str) -> float:
         """Calculate time-based weight for historical events"""
         decay_factor = self.decay_factors.get(decay_type, 180)
@@ -78,7 +155,7 @@ class RiskPredictor:
     def get_medication_history_weight(self, cursor, patient_id: str) -> float:
         """Calculate weighted impact of medication history"""
         query = """
-            SELECT timestamp, dosage
+            SELECT medication_id, timestamp, dosage
             FROM Patient_Medications
             WHERE patient_id = ?
             ORDER BY timestamp DESC
@@ -121,7 +198,7 @@ class RiskPredictor:
             }
         return {'ade_multiplier': 1.0, 'interaction_multiplier': 1.0}
 
-    def calculate_interaction_risk(self, cursor, patient_id: str, new_med_id: int = None) -> float:
+    def calculate_interaction_risk(self, cursor, patient_id: str, new_med_id: int = None) -> Tuple[float, List[Tuple]]:
         """Calculate interaction risk based on medication combinations"""
         query = """
             SELECT DISTINCT medication_id 
@@ -152,83 +229,3 @@ class RiskPredictor:
             risk_score *= (1 + complexity_factor)
         
         return min(risk_score, 1.0), interaction_details
-
-    def predict(self, cursor, patient_id: str, new_med_id: int = None) -> Dict[str, float]:
-        """Generate risk predictions with improved calculation"""
-        self.model.eval()
-        with torch.no_grad():
-            base_features = self.get_features(cursor, patient_id, new_med_id)
-            
-            # Calculate medication history impact
-            med_history_weight = self.get_medication_history_weight(cursor, patient_id)
-            
-            # Get interaction risk
-            interaction_risk, interaction_details = self.calculate_interaction_risk(
-                cursor, patient_id, new_med_id
-            )
-            
-            # Calculate base risks
-            base_predictions = self.model(**base_features)
-            
-            # Apply medication-specific modifiers
-            if new_med_id:
-                risk_modifiers = self.get_med_risk_modifiers(new_med_id)
-                
-                # Adjust ADE risk
-                ade_risk = float(base_predictions[0, 0]) * risk_modifiers['ade_multiplier']
-                ade_risk = min(ade_risk * (1 + med_history_weight * 0.2), self.risk_clamps['max'])
-                
-                # Adjust interaction risk
-                base_interaction = float(base_predictions[0, 1])
-                modified_interaction = base_interaction * risk_modifiers['interaction_multiplier']
-                final_interaction = max(modified_interaction, interaction_risk)
-                
-                # Calculate overall risk
-                overall_risk = (ade_risk * 0.4 + final_interaction * 0.6)
-            else:
-                ade_risk = float(base_predictions[0, 0])
-                final_interaction = interaction_risk
-                overall_risk = float(base_predictions[0, 2])
-            
-            # Apply risk clamps
-            predictions = {
-                'ade_risk': max(min(ade_risk, self.risk_clamps['max']), self.risk_clamps['min']),
-                'interaction_risk': max(min(final_interaction, self.risk_clamps['max']), self.risk_clamps['min']),
-                'overall_risk': max(min(overall_risk, self.risk_clamps['max']), self.risk_clamps['min'])
-            }
-            
-            return predictions
-
-    def explain_prediction(self, cursor, patient_id: str, med_id: int) -> str:
-        """Generate detailed explanation for prediction"""
-        base_features = self.get_features(cursor, patient_id, med_id)
-        risk_modifiers = self.get_med_risk_modifiers(med_id)
-        med_history_weight = self.get_medication_history_weight(cursor, patient_id)
-        interaction_risk, interaction_details = self.calculate_interaction_risk(cursor, patient_id, med_id)
-        
-        explanation = []
-        
-        # Medication-specific risks
-        if med_id in self.high_risk_meds:
-            med_info = self.high_risk_meds[med_id]
-            explanation.append(f"High-risk medication: {med_info['name']}")
-            explanation.append(f"ADE Risk Multiplier: {med_info['ade_mult']:.1f}x")
-            explanation.append(f"Interaction Risk Multiplier: {med_info['int_mult']:.1f}x")
-        
-        # Medication history impact
-        if med_history_weight > 1.0:
-            explanation.append(f"Medication History Impact: +{(med_history_weight-1.0)*100:.0f}%")
-        
-        # Interaction details
-        if interaction_details:
-            explanation.append("\nPotential Interactions:")
-            for med1, med2, risk in interaction_details:
-                explanation.append(f"- {self.get_med_name(cursor, med1)} with {self.get_med_name(cursor, med2)}: {risk:.0%} risk")
-        
-        return "\n".join(explanation)
-
-    def get_med_name(self, cursor, med_id: int) -> str:
-        """Helper function to get medication name"""
-        cursor.execute("SELECT name FROM Medications WHERE medication_id = ?", (med_id,))
-        result = cursor.fetchone()
-        return result['name'] if result else f"Medication {med_id}"
