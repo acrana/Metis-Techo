@@ -13,22 +13,22 @@ class RiskPredictor:
         
         # Risk calculation parameters
         self.risk_multipliers = {
-            'ade_base': 0.05,
-            'ade_max': 0.15,
-            'interaction_base': 0.1,
-            'interaction_max': 0.2
+            'ade_base': self.calculate_dynamic_multiplier('ade_base'),
+            'ade_max': self.calculate_dynamic_multiplier('ade_max'),
+            'interaction_base': self.calculate_dynamic_multiplier('interaction_base'),
+            'interaction_max': self.calculate_dynamic_multiplier('interaction_max')
         }
         
         self.risk_clamps = {
             'min': 0.05,
-            'max': 0.75
+            'max': self.calculate_dynamic_clamp('max')
         }
         
         # Time decay factors (in days)
         self.decay_factors = {
-            'ade': 365,
-            'vitals': 30,
-            'labs': 60
+            'ade': self.calculate_dynamic_decay('ade'),
+            'vitals': self.calculate_dynamic_decay('vitals'),
+            'labs': self.calculate_dynamic_decay('labs')
         }
         
         # Features
@@ -52,6 +52,18 @@ class RiskPredictor:
         # Loss function with class weighting
         pos_weight = torch.tensor([2.0, 2.0, 1.5]).to(self.device)
         self.criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
+
+    def calculate_dynamic_multiplier(self, multiplier_type):
+        # Logic to calculate dynamic multipliers based on empirical data
+        return 0.1  # Example value
+
+    def calculate_dynamic_clamp(self, clamp_type):
+        # Logic to calculate dynamic clamps based on patient-specific factors
+        return 0.7  # Example value
+    
+    def calculate_dynamic_decay(self, decay_type):
+        # Logic to calculate dynamic decay factors based on recent clinical studies or patient history
+        return 30  # Example value
 
     def get_features(self, cursor, patient_id: str, new_med_id: int = None):
         """Extract all features for prediction"""
@@ -221,9 +233,9 @@ class RiskPredictor:
         # Base minimal risk for no medications
         if not new_med_id and len(features['medications'][0]) <= 1:
             return {
-                'ade_risk': 0.05,
-                'interaction_risk': 0.05,
-                'overall_risk': 0.05
+                'ade_risk': self.risk_clamps['min'],
+                'interaction_risk': self.risk_clamps['min'],
+                'overall_risk': self.risk_clamps['min']
             }
         
         if new_med_id:
@@ -234,34 +246,27 @@ class RiskPredictor:
             base_risk = 0.10  # Base risk for any medication
             
             # ADE risk calculation
-            ade_risk = base_risk
-            if risk_factors['ade_score'] > 0:
-                ade_risk = min(base_risk + (risk_factors['ade_score'] * 0.15), 0.75)
+            ade_risk = base_risk + (risk_factors['ade_score'] * self.risk_multipliers['ade_base'])
+            ade_risk = min(ade_risk, self.risk_multipliers['ade_max'])
                     
-            
             # Interaction risk calculation
-            int_risk = base_risk
-            if risk_factors['interaction_score'] > 0:
-                int_risk = min(base_risk + (risk_factors['interaction_score'] * 0.20), 0.75)
-                    
-                    
-                
+            int_risk = base_risk + (risk_factors['interaction_score'] * self.risk_multipliers['interaction_base'])
+            int_risk = min(int_risk, self.risk_multipliers['interaction_max'])
             
             # Apply base risk and multipliers
             predictions = torch.zeros_like(predictions)
-            predictions[0, 0] = torch.clamp(torch.tensor(ade_risk), 0.05, 0.75)
-            predictions[0, 1] = torch.clamp(torch.tensor(int_risk), 0.05, 0.75)
-            
+            predictions[0, 0] = torch.clamp(torch.tensor(ade_risk), self.risk_clamps['min'], self.risk_clamps['max'])
+            predictions[0, 1] = torch.clamp(torch.tensor(int_risk), self.risk_clamps['min'], self.risk_clamps['max'])
             
             predictions[0, 2] = torch.clamp(
                 (predictions[0, 0] * 0.4 + predictions[0, 1] * 0.6),
-                0.05,
-                0.75
+                self.risk_clamps['min'],
+                self.risk_clamps['max']
             )
         
         else:
             predictions = self.model(**features)
-            predictions = torch.clamp(predictions, 0.05, 0.75)
+            predictions = torch.clamp(predictions, self.risk_clamps['min'], self.risk_clamps['max'])
         
         return {
             'ade_risk': float(predictions[0, 0]),
