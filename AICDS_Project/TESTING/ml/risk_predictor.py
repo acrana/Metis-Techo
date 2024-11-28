@@ -4,7 +4,7 @@ import torch.optim as optim
 import numpy as np
 from datetime import datetime, timedelta
 from typing import Dict, List, Tuple
-from patient_risk_model import PatientRiskNet
+from ml.patient_risk_model import PatientRiskNet
 
 class RiskPredictor:
     def __init__(self):
@@ -134,7 +134,7 @@ class RiskPredictor:
         return features
 
     def get_med_specific_features(self, cursor, patient_id: str, med_id: int) -> Dict:
-        """Get medication-specific risk features"""
+        """Get medication-specific risk features with proper discontinued med handling"""
         # Get medication type
         cursor.execute("""
             SELECT type FROM Medications WHERE medication_id = ?
@@ -158,27 +158,43 @@ class RiskPredictor:
             time_weight = np.exp(-np.log(2) * days_ago / self.decay_factors['ade'])
             ade_score += time_weight * (1.0 if ade['medication_id'] == med_id else 0.7)
         
-        # Get interaction count
+        # Modified interaction query to properly handle discontinued medications
         cursor.execute("""
             SELECT
                 COUNT(*) as interaction_count,
-                COUNT(CASE WHEN interaction_type IN ('Major', 'High') THEN 1 END) as major_count,
-                COUNT(CASE WHEN interaction_type = 'Moderate' THEN 1 END) as moderate_count
-            FROM Patient_Medications pm
+                COUNT(CASE WHEN mi.interaction_type IN ('Major', 'High') THEN 1 END) as major_count,
+                COUNT(CASE WHEN mi.interaction_type = 'Moderate' THEN 1 END) as moderate_count
+            FROM (
+                SELECT DISTINCT medication_id 
+                FROM Patient_Medications 
+                WHERE patient_id = ? 
+                AND dosage != 'DISCONTINUED'  
+                AND medication_id != ?
+                AND medication_id IN (
+                    SELECT medication_id 
+                    FROM Patient_Medications 
+                    WHERE patient_id = ?
+                    GROUP BY medication_id 
+                    HAVING MAX(CASE WHEN dosage = 'DISCONTINUED' THEN 1 ELSE 0 END) = 0
+                )
+            ) as current_meds
             JOIN Medication_Interactions mi ON 
-                (mi.medication_1_id = pm.medication_id AND mi.medication_2_id = ?) OR
-                (mi.medication_2_id = pm.medication_id AND mi.medication_1_id = ?)
-            WHERE pm.patient_id = ? AND pm.dosage != 'DISCONTINUED'
-        """, (med_id, med_id, patient_id))
+                (mi.medication_1_id = current_meds.medication_id AND mi.medication_2_id = ?) OR
+                (mi.medication_2_id = current_meds.medication_id AND mi.medication_1_id = ?)
+        """, (patient_id, med_id, patient_id, med_id, med_id))
         
         interactions = cursor.fetchone()
         
         interaction_score = 0.0
         if interactions['interaction_count'] > 0:
-            interaction_score = min((interactions['major_count'] or 0) * 0.4 +
-                                    (interactions['moderate_count'] or 0) * 0.2, 0.8)
-                            
+            major_score = (interactions['major_count'] or 0) * 0.25
+            moderate_score = (interactions['moderate_count'] or 0) * 0.15
             
+            interaction_score = min(major_score + moderate_score, 0.5)
+            
+            total_meds = interactions['interaction_count']
+            if total_meds > 3:
+                interaction_score *= (1 + min(total_meds - 3, 3) * 0.1)
         
         med_specific_tensor = torch.tensor([[
             float(ade_score > 0),
@@ -186,7 +202,7 @@ class RiskPredictor:
             float(interaction_score > 0),
             interaction_score,
             float(interactions['major_count'] or 0 > 0),
-            float(interactions['interaction_count']) / 5.0
+            min(float(interactions['interaction_count']) / 5.0, 1.0)
         ]], dtype=torch.float32).to(self.device)
         
         return {
@@ -198,25 +214,37 @@ class RiskPredictor:
         }
 
     def predict(self, cursor, patient_id: str, new_med_id: int = None) -> Dict[str, float]:
-        """Generate risk predictions"""
+        """Generate risk predictions with proper base scoring"""
         self.model.eval()
         with torch.no_grad():
             features = self.get_features(cursor, patient_id, new_med_id)
+            
+            # If no medications selected, return minimal risk
+            if not new_med_id and len(features['medications'][0]) <= 1:  # Only has padding value
+                return {
+                    'ade_risk': self.risk_clamps['min'],
+                    'interaction_risk': self.risk_clamps['min'],
+                    'overall_risk': self.risk_clamps['min']
+                }
             
             if new_med_id:
                 risk_factors = features.pop('risk_factors')
                 predictions = self.model(**features)
                 
-                # Apply risk adjustments
-                ade_multiplier = 1.0 + min(
-                    risk_factors['ade_score'] * self.risk_multipliers['ade_base'],
-                    self.risk_multipliers['ade_max']
-                )
+                # Apply adjustments only if real risk factors exist
+                ade_multiplier = 1.0
+                if risk_factors['ade_score'] > 0:
+                    ade_multiplier += min(
+                        risk_factors['ade_score'] * self.risk_multipliers['ade_base'],
+                        self.risk_multipliers['ade_max']
+                    )
                 
-                int_multiplier = 1.0 + min(
-                    risk_factors['interaction_score'] * self.risk_multipliers['interaction_base'],
-                    self.risk_multipliers['interaction_max']
-                )
+                int_multiplier = 1.0
+                if risk_factors['interaction_score'] > 0:
+                    int_multiplier += min(
+                        risk_factors['interaction_score'] * self.risk_multipliers['interaction_base'],
+                        self.risk_multipliers['interaction_max']
+                    )
                 
                 # Apply multipliers and clamps
                 predictions[0, 0] = torch.clamp(
@@ -231,15 +259,15 @@ class RiskPredictor:
                     self.risk_clamps['max']
                 )
                 
-                # Calculate overall risk
+                # Calculate overall risk with adjusted weights
                 predictions[0, 2] = torch.clamp(
-                    (predictions[0, 0] * 0.3 + predictions[0, 1] * 0.7),
+                    (predictions[0, 0] * 0.4 + predictions[0, 1] * 0.6),  # Adjusted weights
                     self.risk_clamps['min'],
                     self.risk_clamps['max']
                 )
             else:
                 predictions = self.model(**features)
-            
+                
             return {
                 'ade_risk': float(predictions[0, 0]),
                 'interaction_risk': float(predictions[0, 1]),
@@ -269,10 +297,8 @@ class RiskPredictor:
                 
                 for patient_id in batch_patients:
                     try:
-                        # Get features
                         features = self.get_features(cursor, patient_id)
                         
-                        # Get labels
                         cursor.execute("""
                             SELECT COUNT(*) as count 
                             FROM ADE_Monitoring 
@@ -297,7 +323,6 @@ class RiskPredictor:
                             float(has_ade or has_interaction)
                         ]], dtype=torch.float32).to(self.device)
                         
-                        # Forward pass
                         predictions = self.model(**features)
                         loss = self.criterion(predictions, labels)
                         batch_loss += loss
@@ -311,7 +336,6 @@ class RiskPredictor:
                     total_loss += batch_loss.item()
                     batches += 1
                     
-                    # Backpropagation
                     batch_loss.backward()
                     torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
                     self.optimizer.step()
@@ -319,7 +343,6 @@ class RiskPredictor:
             if batches > 0:
                 avg_loss = total_loss / batches
                 print(f"Epoch {epoch + 1}/{epochs}, Average Loss: {avg_loss:.4f}")
-
 
     def explain_prediction(self, cursor, patient_id: str, med_id: int) -> str:
         """Generate an explanation for the prediction"""
@@ -338,6 +361,10 @@ class RiskPredictor:
         """Save model state"""
         torch.save(self.model.state_dict(), path)
 
+    def load(self, path: str):
+        """Load model state"""
+        self.model.load_state_dict(torch.load(path))
+        self.model.eval()
     def load(self, path: str):
         """Load model state"""
         self.model.load_state_dict(torch.load(path))
