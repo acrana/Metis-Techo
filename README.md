@@ -13,7 +13,7 @@ The AICDSS project demonstrates an innovative approach to supporting clinical de
 - Patient vital sign monitoring and analysis
 - Medication interaction checking
 - Machine learning-based risk prediction
-- Interactive data visualization for clinical trends
+
 
 _More projects coming soon..._
 
