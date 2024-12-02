@@ -1,5 +1,3 @@
-Welcome to my healthcare technology learning portfolio. This repository showcases my journey in developing skills to improve patient care through technology. 
-
 METIS, named after the Greek Titan goddess of wisdom, represents my exploration into how AI and machine learning can enhance medical decision-making.
 
 METIS is an AI-powered Clinical Decision Support System that monitors patient data in real-time and predicts potential risks. While built with test data, this project demonstrates the potential of combining clinical knowledge with modern technology to support safer healthcare delivery.
