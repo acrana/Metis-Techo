@@ -1,21 +1,18 @@
-# Metis-Techo Portfolio
+# Healthcare Technology Portfolio
 
-Welcome to my portfolio. 
-This portfolio represents my journey in applying technology to improve healthcare delivery and patient outcomes. 
-Each project reflects a commitment to learning.
-
+Welcome to my portfolio exploring technology's potential to improve healthcare delivery and patient outcomes. Each project represents a step in learning and developing skills that can make a difference in clinical care.
 
 ## Projects
 
 ### [AI-Powered Clinical Decision Support System (AICDSS)](https://github.com/acrana/Metis-Techo/tree/main/AICDSS)
 
-The AICDSS project demonstrates an innovative approach to supporting clinical decision-making. This system combines real-time patient monitoring with advanced machine learning algorithms to assist healthcare providers in medication management and risk assessment. It features:
-- Patient vital sign monitoring and analysis
-- Medication interaction checking
-- Machine learning-based risk prediction
+METIS (Medical Enhanced Treatment Intelligence System), named after the Greek Titan goddess of wisdom, combines machine learning with clinical data to enhance medical decision-making. This learning project features:
+- Real-time patient vital monitoring
+- ML-driven risk prediction with PyTorch
+- Medication interaction analysis
+- Clinical trend visualization
+- Automated alert system
 
-
-_More projects coming soon..._
+*More healthcare technology projects coming soon...*
 
 ---
-
