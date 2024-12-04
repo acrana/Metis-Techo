@@ -1,6 +1,3 @@
-# CLABSI Monitoring Database
-
-## Database Schema
 ```mermaid
 erDiagram
     patients ||--|{ central_lines : "has"
