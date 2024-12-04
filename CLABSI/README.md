@@ -1,4 +1,4 @@
-```mermaid
+``` mermaid
 erDiagram
     patients ||--|{ central_lines : "has"
     patients ||--|{ clinical_measurements : "has"
@@ -55,3 +55,4 @@ erDiagram
         boolean site_clean
         boolean chg_applied
     }
+```
