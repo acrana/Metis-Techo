@@ -1,1 +1,60 @@
-#TBA
+# CLABSI Monitoring Database
+
+## Database Schema
+```mermaid
+erDiagram
+    patients ||--|{ central_lines : "has"
+    patients ||--|{ clinical_measurements : "has"
+    patients ||--|{ medical_history : "has"
+    central_lines ||--|{ clabsi_events : "may develop"
+    central_lines ||--|{ dressing_changes : "requires"
+    central_lines ||--|{ daily_line_checks : "requires"
+
+    patients {
+        varchar patient_id PK
+        int age
+        varchar gender
+        varchar race
+        datetime admission_date
+        datetime discharge_date
+    }
+
+    central_lines {
+        varchar line_id PK
+        varchar patient_id FK
+        varchar line_type
+        datetime insertion_date
+        datetime removal_date
+        boolean bundle_compliance
+    }
+
+    clinical_measurements {
+        varchar measurement_id PK
+        varchar patient_id FK
+        decimal temperature
+        decimal hemoglobin
+        decimal wbc_count
+    }
+
+    clabsi_events {
+        varchar event_id PK
+        varchar line_id FK
+        datetime confirmation_date
+        varchar organism
+        varchar outcome
+    }
+
+    dressing_changes {
+        varchar change_id PK
+        varchar line_id FK
+        datetime change_date
+        varchar dressing_type
+    }
+
+    daily_line_checks {
+        varchar check_id PK
+        varchar line_id FK
+        datetime check_date
+        boolean site_clean
+        boolean chg_applied
+    }
