@@ -1,58 +1,79 @@
 ``` mermaid
 erDiagram
-    patients ||--|{ central_lines : "has"
-    patients ||--|{ clinical_measurements : "has"
-    patients ||--|{ medical_history : "has"
-    central_lines ||--|{ clabsi_events : "may develop"
-    central_lines ||--|{ dressing_changes : "requires"
-    central_lines ||--|{ daily_line_checks : "requires"
+    patients ||--o{ central_lines : has
+    patients ||--o{ clinical_measurements : has
+    patients ||--o{ medical_history : has
+    patients ||--o{ clabsi_events : has
+    central_lines ||--o{ dressing_changes : tracks
+    central_lines ||--o{ daily_line_checks : requires
+    central_lines ||--o{ clabsi_events : develops
 
     patients {
-        varchar patient_id PK
+        string patient_id PK
         int age
-        varchar gender
-        varchar race
+        string gender
+        string race
+        string ethnicity
+        string unit_department
         datetime admission_date
         datetime discharge_date
+        int length_of_stay
     }
 
     central_lines {
-        varchar line_id PK
-        varchar patient_id FK
-        varchar line_type
+        string line_id PK
+        string patient_id FK
+        string line_type
         datetime insertion_date
         datetime removal_date
         boolean bundle_compliance
+        int line_days
     }
 
     clinical_measurements {
-        varchar measurement_id PK
-        varchar patient_id FK
+        string measurement_id PK
+        string patient_id FK
+        datetime measurement_date
         decimal temperature
         decimal hemoglobin
         decimal wbc_count
+        decimal neutrophil_count
+    }
+
+    medical_history {
+        string history_id PK
+        string patient_id FK
+        string condition_type
+        boolean condition_value
+        datetime onset_date
     }
 
     clabsi_events {
-        varchar event_id PK
-        varchar line_id FK
+        string event_id PK
+        string patient_id FK
+        string line_id FK
         datetime confirmation_date
-        varchar organism
-        varchar outcome
+        string organism
+        string treatment_provided
+        string outcome
     }
 
     dressing_changes {
-        varchar change_id PK
-        varchar line_id FK
+        string change_id PK
+        string line_id FK
         datetime change_date
-        varchar dressing_type
+        string performed_by
+        string dressing_type
+        string site_condition
     }
 
     daily_line_checks {
-        varchar check_id PK
-        varchar line_id FK
+        string check_id PK
+        string line_id FK
         datetime check_date
+        string performed_by
         boolean site_clean
+        boolean dressing_intact
         boolean chg_applied
     }
 ```
