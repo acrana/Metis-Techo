@@ -1,0 +1,197 @@
+# Total access points score
+def calculate_access_score(row):
+    base_score = 0
+    base_score += 1 if row['central_line'] else 0
+    base_score += 0.5 * row['num_PIVs']  # Count each PIV as 0.5
+    base_score += 1 if row['art_line'] else 0
+    base_score += 1 if row['midline'] else 0
+    return base_score
+
+# Access complexity index
+def access_complexity_index(row):
+    complexity = 0
+    if row['num_access_points'] >= 3:
+        complexity += 2
+    if row['art_line'] and row['central_line']:
+        complexity += 1
+    if row['midline'] and row['central_line']:
+        complexity += 1
+    return complexity
+
+# Line risk score
+def line_risk_score(row):
+    base_risk = {
+        'temp_dialysis': 3.0,
+        'PICC': 2.0,
+        'tunneled': 1.0,
+        'port': 1.0
+    }
+    
+    location_risk = {
+        'RIJ': 2.0,
+        'femoral': 3.0,
+        'subclavian': 1.0
+    }
+    
+    risk_score = base_risk.get(row['line_type'], 0)
+    risk_score += location_risk.get(row['location'], 0)
+    
+    # Add multipliers
+    if row['TPN']:
+        risk_score *= 1.5
+    if row['line_exchange_7d']:
+        risk_score *= 1.2
+        
+    return risk_score
+
+# Line stability index
+def line_stability(row):
+    stability = 10  # Start with max stability
+    if row['line_malfunction']:
+        stability -= 3
+    if row['line_exchange_7d']:
+        stability -= 2
+    if row['POA'] == False:
+        stability -= 1
+    return max(0, stability)
+
+# Composite acuity score
+def acuity_score(row):
+    score = 0
+    
+    # Primary diagnoses weights
+    diagnosis_weights = {
+        'abdominal_gi': 2,
+        'respiratory_failure': 2,
+        'sepsis': 3,
+        'renal_failure': 2
+    }
+    
+    for dx, weight in diagnosis_weights.items():
+        if row[dx]:
+            score += weight
+            
+    # Additional risk factors
+    if row['ostomy']:
+        score += 2
+    if row['nutritional_compromise']:
+        score += 1.5
+    if row['fluid_status_issues']:
+        score += 1.5
+        
+    return score
+
+# Specific risk index for dialysis patients
+def dialysis_risk_index(row):
+    if not row['dialysis']:
+        return 0
+        
+    risk = 5  # Base risk for dialysis
+    if row['av_fistula_issues']:
+        risk += 2
+    if row['temp_dialysis_cath']:
+        risk += 3
+    return risk
+
+# Normalized clinical scores
+def normalize_clinical_values(row):
+    # Z-score normalization for continuous variables
+    normalized = {}
+    
+    clinical_ranges = {
+        'temperature': {'mean': 37, 'std': 0.5},
+        'map': {'mean': 75, 'std': 10},
+        'pt': {'mean': 13.5, 'std': 2},
+        'albumin': {'mean': 3.5, 'std': 0.5}
+    }
+    
+    for measure, ranges in clinical_ranges.items():
+        if pd.notnull(row[measure]):
+            normalized[measure] = (row[measure] - ranges['mean']) / ranges['std']
+            
+    return normalized
+
+# Infection risk score
+def infection_risk_score(row):
+    risk = 0
+    
+    # WBC risk
+    if row['wbc'] > 12:
+        risk += (row['wbc'] - 12) * 0.2
+    elif row['wbc'] < 4:
+        risk += (4 - row['wbc']) * 0.3
+        
+    # Temperature risk
+    if row['temperature'] > 38:
+        risk += (row['temperature'] - 38) * 2
+        
+    # CRP risk if available
+    if 'crp' in row and pd.notnull(row['crp']):
+        risk += min(row['crp'] * 0.1, 5)  # Cap CRP contribution
+        
+    return risk
+
+# Care compliance score
+def care_compliance_score(row):
+    weights = {
+        'chg_bathing': 0.3,
+        'dressing_change': 0.3,
+        'line_necessity': 0.2,
+        'documentation': 0.2
+    }
+    
+    score = 0
+    for measure, weight in weights.items():
+        if pd.notnull(row[f'{measure}_compliance']):
+            score += (row[f'{measure}_compliance'] / 100) * weight
+            
+    return score
+
+# Care complexity index
+def care_complexity_index(row):
+    complexity = 0
+    
+    if row['multiple_providers']:
+        complexity += 2
+    if row['recent_or']:
+        complexity += 2
+    if row['complex_wound_care']:
+        complexity += 1.5
+    if row['multiple_access_points'] >= 3:
+        complexity += 1.5
+        
+    return complexity
+
+# Time risk score
+def time_risk_score(row):
+    risk = 0
+    
+    # Days with multiple access risk
+    access_days = row['days_multiple_access']
+    risk += min(access_days * 0.5, 5)  # Cap at 5 points
+    
+    # TPN duration risk
+    if row['tpn_days']:
+        risk += min(row['tpn_days'] * 0.3, 3)
+        
+    # Recent line exchange risk
+    if row['days_since_exchange'] < 7:
+        risk += max(0, (7 - row['days_since_exchange']) * 0.4)
+        
+    # Recent OR risk
+    if row['days_since_or'] < 5:
+        risk += max(0, (5 - row['days_since_or']) * 0.3)
+        
+    return risk
+
+# Critical period flag
+def in_critical_period(row):
+    # Returns 1 if in high-risk period
+    high_risk = 0
+    
+    if 4 <= row['line_days'] <= 7:
+        high_risk = 1
+    elif 8 <= row['line_days'] <= 14:
+        high_risk = 0.7
+    
+    return high_risk
