@@ -1,24 +1,23 @@
+METIS - Clinical Decision Support System
+METIS is an AI-powered Clinical Decision Support System that helps healthcare providers monitor patient data and predict potential risks. The system analyzes patient vitals, lab results, and medications in real-time to provide early warnings and support clinical decisions.
+Features
 
-METIS is an AI-powered Clinical Decision Support System that monitors patient data in real-time and predicts potential risks. While built with test data, this project demonstrates the potential of combining clinical knowledge with modern technology to support safer healthcare delivery.
+Patient Monitoring: Track vital signs and lab results with customizable alerts
+Medication Safety: Check drug interactions and contraindications
+Risk Analysis: ML-powered prediction of adverse events
+Interactive Dashboard: Clean, modern interface with dark mode support
+Clinical Trends: Visualize patient data over time
 
+Technologies Used
 
-## Core Features
-- Real-time patient vital sign monitoring
-- ML-driven risk prediction using PyTorch
-- Medication interaction analysis
-- Clinical trend visualization
-- Automated alert system
+Frontend: PySide6
+Backend: Python, SQLite
+Machine Learning: PyTorch
+Data Analysis: Pandas, NumPy
 
-## Technical Implementation
-- Machine Learning: PyTorch for risk prediction models
-- Frontend: PySide6 for desktop interface
-- Backend: SQLite database for clinical data
-- Data Analysis: Real-time processing of patient metrics
+Technology Stack
 
-## Technology Stack
-- Python 3.9+
-- PyTorch
-- PySide6
-- SQLite
-
-The experience gained from building METIS will help guide my learning. Key learning outcomes include understanding the importance of a strong foundational database.
+Python 3.9+
+PyTorch
+PySide6
+SQLite
