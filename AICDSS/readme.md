@@ -24,3 +24,15 @@ METIS is an AI-powered Clinical Decision Support System that helps healthcare pr
 * PySide6
 * SQLite
 
+
+Future Development
+MIMIC IV Integration
+
+* Enhanced ML model training using real-world ICU data
+* Validation of risk prediction algorithms
+* Expanded patient demographics analysis
+
+API Development
+
+
+
