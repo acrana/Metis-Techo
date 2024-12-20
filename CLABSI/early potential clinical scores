@@ -195,3 +195,236 @@ def in_critical_period(row):
         high_risk = 0.7
     
     return high_risk
+
+
+
+
+
+
+
+
+OR
+
+
+
+
+
+
+class CLABSIRiskScore:
+    def __init__(self):
+        # Category weights based on literature and local data
+        self.weights = {
+            'severity_score': 0.25,      # Highest weight - strong predictor in literature
+            'line_factors': 0.25,        # Equal weight - critical in local cases
+            'clinical_factors': 0.20,    # Lab/vital signs from evidence
+            'treatment_complexity': 0.20, # Treatment burden importance
+            'hospital_factors': 0.10      # Environmental/systematic factors
+        }
+        
+        # Risk thresholds for final score
+        self.risk_levels = {
+            'low': 0.3,
+            'moderate': 0.6,
+            'high': 0.8,
+            'very_high': 0.9
+        }
+
+    def calculate_severity_score(self, data):
+        """Severity and comorbidity risk based on evidence"""
+        score = 0
+        
+        # Validated severity scores
+        if data.get('aps_iii', 0) >= 63:
+            score += 2
+        if data.get('sofa', 0) >= 7:
+            score += 1.5
+            
+        # Evidence-based comorbidities
+        comorbidity_weights = {
+            'renal_disease': 2.0,
+            'liver_disease': 1.5,
+            'heart_failure': 1.5,
+            'cancer': 1.5,
+            'diabetes_complex': 1.0,
+            'gi_surgery': 2.0,  # From local cases
+            'sepsis': 2.0       # From both evidence and cases
+        }
+        
+        for condition, weight in comorbidity_weights.items():
+            if data.get(condition, False):
+                score += weight
+                
+        return min(score / 12, 1.0)  # Normalize
+
+    def calculate_line_factors(self, data):
+        """Line-specific risks from evidence and local cases"""
+        score = 0
+        
+        # Base line type risk
+        line_risks = {
+            'temp_dialysis': 3.0,  # Highest risk in both evidence and cases
+            'PICC': 2.0,
+            'tunneled': 1.0,
+            'port': 1.0
+        }
+        score += line_risks.get(data.get('line_type'), 0)
+        
+        # Location risks
+        location_risks = {
+            'femoral': 3.0,  # Highest risk in literature
+            'RIJ': 2.0,      # Common in local cases
+            'subclavian': 1.0
+        }
+        score += location_risks.get(data.get('location'), 0)
+        
+        # Multiple access points (from local cases)
+        if data.get('central_line', False) and data.get('arterial_line', False):
+            score += 2
+        if data.get('num_lines', 0) >= 3:
+            score += 2
+            
+        # Line issues/changes
+        if data.get('line_exchange', False):
+            score *= 1.5
+        if data.get('line_complications', False):
+            score *= 1.3
+            
+        return min(score / 10, 1.0)  # Normalize
+
+    def calculate_clinical_factors(self, data):
+        """Clinical indicators from evidence"""
+        score = 0
+        
+        # Lab values with evidence-based thresholds
+        if data.get('wbc', 7) > 12 or data.get('wbc', 7) < 4:
+            score += 1
+        if data.get('platelet_count', 200) < 150:
+            score += 1
+        if data.get('creatinine', 1) > 2:
+            score += 1
+        if data.get('albumin', 3.5) < 3:
+            score += 1.5
+            
+        # Vital signs
+        if data.get('map', 75) < 65:
+            score += 1
+        if data.get('temp', 37) > 38.0:
+            score += 1.5
+            
+        # Urine output
+        if data.get('urine_output', 1) < 0.5:  # mL/kg/hr
+            score += 1.5
+            
+        return min(score / 8, 1.0)  # Normalize
+
+    def calculate_treatment_complexity(self, data):
+        """Treatment-related risks from evidence"""
+        score = 0
+        
+        # Antibiotic patterns
+        if data.get('num_antibiotics', 0) >= 3:
+            score += 1.5
+        if data.get('antibiotic_days', 0) > 7:
+            score += 1
+            
+        # High-risk treatments
+        if data.get('rrt_status', False):
+            score += 2
+        if data.get('mechanical_vent', False):
+            score += 1.5
+        if data.get('tpn_status', False):
+            score += 2
+            
+        # Procedure burden
+        if data.get('num_procedures', 0) >= 3:
+            score += 1.5
+            
+        return min(score / 9, 1.0)  # Normalize
+
+    def calculate_hospital_factors(self, data):
+        """Hospital and systematic factors"""
+        score = 0
+        
+        # Length of stay impact
+        if data.get('icu_los', 0) > 7:
+            score += 1.5
+            
+        # Critical time periods
+        if 4 <= data.get('line_days', 0) <= 7:
+            score += 2
+        
+        # Service transitions
+        if data.get('service_changes', 0) > 1:
+            score += 1
+            
+        # Unit transfers
+        if data.get('unit_transfers', 0) > 1:
+            score += 1
+            
+        return min(score / 5.5, 1.0)  # Normalize
+
+    def calculate_total_risk_score(self, data):
+        """Calculate final weighted risk score"""
+        scores = {
+            'severity_score': self.calculate_severity_score(data),
+            'line_factors': self.calculate_line_factors(data),
+            'clinical_factors': self.calculate_clinical_factors(data),
+            'treatment_complexity': self.calculate_treatment_complexity(data),
+            'hospital_factors': self.calculate_hospital_factors(data)
+        }
+        
+        # Calculate weighted total
+        total_score = sum(score * self.weights[category] 
+                         for category, score in scores.items())
+        
+        # Determine risk level
+        if total_score >= self.risk_levels['very_high']:
+            risk_level = 'very_high'
+        elif total_score >= self.risk_levels['high']:
+            risk_level = 'high'
+        elif total_score >= self.risk_levels['moderate']:
+            risk_level = 'moderate'
+        else:
+            risk_level = 'low'
+            
+        return {
+            'total_score': total_score,
+            'risk_level': risk_level,
+            'component_scores': scores
+        }
+
+# Required MIMIC IV tables and fields:
+"""
+1. ICU stays table:
+   - los
+   - unit_transfers
+   - service_changes
+
+2. Procedures table:
+   - line placement details
+   - line exchanges
+   - other procedures
+
+3. Chartevents:
+   - vital signs
+   - urine output
+   - ventilation status
+
+4. Labevents:
+   - WBC
+   - platelets
+   - creatinine
+   - albumin
+
+5. Diagnoses:
+   - comorbidities
+   - complications
+
+6. Medications:
+   - antibiotics
+   - TPN status
+
+7. Severity scores:
+   - SOFA
+   - APS III
+"""
