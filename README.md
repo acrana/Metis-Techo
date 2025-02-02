@@ -13,6 +13,10 @@ METIS, named after the Greek Titan goddess of wisdom, combines machine learning 
 - Clinical trend visualization
 - Automated alert system
 
+### [Central Line-Associated Bloodstream Infection (CLABSI) Prediction](https://github.com/acrana/Metis-Techo/tree/main/CLABSI)
+CLABSI is a serious, life-threatening complication in critically ill patients. This project leverages data from the MIMIC-IV database to build an explainable machine learning model for predicting CLABSI risk. By identifying key factors that contribute to infection risk, the model aims to support early intervention and improve patient outcomes.
+ - FHIR API (In Progress)
+
 *More healthcare technology projects coming soon...*
 
 ---
