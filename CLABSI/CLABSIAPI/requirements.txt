@@ -1,6 +1,7 @@
-Flask
-joblib
-xgboost
+streamlit
 pandas
+pickle
+shap
+matplotlib
 numpy
-gunicorn
+xgboost
