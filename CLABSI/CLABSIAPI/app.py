@@ -40,7 +40,6 @@ else:
         has_liver = st.checkbox('Has Liver Disease')
         has_chf = st.checkbox('Has CHF')
         has_cva = st.checkbox('Has CVA')
-        days_since_last_dressing_change = st.number_input('Days Since Last Dressing Change', min_value=0)
         chg_adherence_ratio = st.slider('CHG Adherence Ratio', 0.0, 1.0, 0.5)
 
     with col2:
@@ -62,7 +61,6 @@ else:
             'has_liver': int(has_liver),
             'has_chf': int(has_chf),
             'has_cva': int(has_cva),
-            'days_since_last_dressing_change': days_since_last_dressing_change,
             'chg_adherence_ratio': chg_adherence_ratio,
             'wbc_mean': wbc_mean,
             'plt_mean': plt_mean,
@@ -85,7 +83,6 @@ else:
         st.header(f'Prediction: {risk_level}')
         st.subheader(f'Probability: {probability[0]:.2%}')
 
-        # Feature importance visualization
         feature_importance = pd.DataFrame({
             'Feature': TRAINING_FEATURES,
             'Importance': model.feature_importances_
@@ -97,7 +94,6 @@ else:
         plt.tight_layout()
         st.pyplot(fig)
 
-        # Show top contributing factors
         st.subheader("Top Contributing Factors:")
         top_features = feature_importance.tail(5)
         for _, row in top_features.iterrows():
