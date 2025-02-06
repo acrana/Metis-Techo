@@ -5,6 +5,16 @@ import matplotlib.pyplot as plt
 import json
 import os
 
+# Get current directory and build paths
+current_dir = os.path.dirname(os.path.abspath(__file__))
+model_path = os.path.join(current_dir, 'final_xgb_model.pkl')
+features_path = os.path.join(current_dir, 'training_features.json')
+
+# Debug file paths
+st.write("Current directory:", current_dir)
+st.write("Model exists:", os.path.exists(model_path))
+st.write("Features exists:", os.path.exists(features_path))
+
 # Load CLABSI model
 if 'model_clabsi' not in st.session_state:
     model_clabsi = joblib.load('final_xgb_model.pkl')
