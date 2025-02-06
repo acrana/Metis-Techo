@@ -18,7 +18,6 @@ try:
     with open(os.path.join(current_dir, "training_features.json"), "r") as f:
         TRAINING_FEATURES = json.load(f)
 
-    [rest of your code remains the same...]
 
 except Exception as e:
     st.error(f"Error loading files: {str(e)}\nTried path: {model_path}")
