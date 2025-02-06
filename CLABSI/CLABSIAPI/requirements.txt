@@ -1,8 +1,5 @@
 streamlit
-pandas==1.5.3
-numpy
-scikit-learn
-joblib
-xgboost
+pandas
 matplotlib
-shap
+scikit-learn
+xgboost
