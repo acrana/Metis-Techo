@@ -2,11 +2,9 @@ import streamlit as st
 import joblib
 import pandas as pd
 import matplotlib.pyplot as plt
-import shap
 import json
 import os
 
-# Load all models
 if 'model1' not in st.session_state:
     model1 = joblib.load('clf1.pkl')
     model2 = joblib.load('clf2.pkl')
@@ -21,7 +19,6 @@ else:
     model2 = st.session_state["model2"]
     model_clabsi = st.session_state["model_clabsi"]
 
-# Load scalers and features
 scaler1 = joblib.load("Scaler1.pkl")
 scaler2 = joblib.load("Scaler2.pkl")
 with open("training_features.json", "r") as f:
@@ -31,20 +28,14 @@ continuous_vars1 = ['LOS_before_using_IMV','LOS_before_using_CVC','APSIII','Temp
 continuous_vars2 = ['Age','Aniongap','APSIII','SAPII']
 
 st.set_page_config(layout='wide')
-
 st.write("<h1 style='text-align: center'>ICU Device Infection and Survival Prediction</h1>", unsafe_allow_html=True)
 
-# Create tabs
 tab1, tab2 = st.tabs(["Device Infection & Survival", "CLABSI Prediction"])
 
 with tab1:
-    st.warning('The ML model assists ICU physicians in making informed decisions on optimal device insertion timing to reduce the risk of device-associated infections.')
-
+    st.warning('The ML model assists ICU physicians in making informed decisions on optimal device insertion timing.')
     st.markdown('-----')
-    dic2 = {
-        'Yes': 1,
-        'No': 0
-    }
+    dic2 = {'Yes': 1, 'No': 0}
     
     col1, col2 = st.columns(2)
     with col1:
@@ -61,17 +52,16 @@ with tab1:
 
     with col2:
         Cancer = st.selectbox("Cancer", ["Yes", "No"])
-        Age = st.text_input("Age (years)")	
-        SAPII = st.text_input("SAPSII Score")	
-        Cerebrovascular_disease = st.selectbox("Cerebrovascular disease", ["Yes", "No"])	
-        Liver_disease = st.selectbox("Liver disease", ["Yes", "No"])	
-        Aniongap = st.text_input("Anion gap (mmol/L)") 	
-        Myocardial_infarct = st.selectbox("Myocardial infarct", ["Yes", "No"])		
+        Age = st.text_input("Age (years)")    
+        SAPII = st.text_input("SAPSII Score")    
+        Cerebrovascular_disease = st.selectbox("Cerebrovascular disease", ["Yes", "No"])    
+        Liver_disease = st.selectbox("Liver disease", ["Yes", "No"])    
+        Aniongap = st.text_input("Anion gap (mmol/L)")     
+        Myocardial_infarct = st.selectbox("Myocardial infarct", ["Yes", "No"])        
         Two_or_more_devices = st.selectbox("Using two or more devices", ["Yes", "No"])
 
     if st.button("Predict Device Infection & Survival"):
         with st.spinner("Forecasting..."):
-            st.header('Device-associated Infection Prediction')
             test_df = pd.DataFrame([float(LOS_before_using_CVC), float(LOS_before_using_IMV), dic2[Tracheostomy], 
                                   float(APSIII), dic2[MICU_or_SICU], float(Temperature), float(LOS_before_using_IUC), 
                                   float(MAP), dic2[RRT], float(PT)], 
@@ -79,27 +69,8 @@ with tab1:
                                       'MICU_or_SICU', 'Temperature', 'LOS_before_using_IUC', 'MAP', 'RRT', 'PT']).T
             
             test_df[continuous_vars1] = scaler1.transform(test_df[continuous_vars1])
-            explainer = shap.Explainer(model1)
-            shap_ = explainer.shap_values(test_df)
-            
-            shap.waterfall_plot(
-                shap.Explanation(values=shap_[0, :], base_values=explainer.expected_value, data=test_df.iloc[0, :]),
-                show=False)
-            plt.tight_layout()
-            plt.savefig('shap1.png', dpi=300)
-            
-            shap.initjs()
-            shap.force_plot(explainer.expected_value, shap_[0, :], test_df.iloc[0, :], show=False, matplotlib=True,
-                            figsize=(20, 5))
-            plt.tight_layout()
-            plt.savefig('shap2.png', dpi=300)
-            
-            col1, col2, col3 = st.columns([2, 5, 3])
-            with col2:
-                st.image('shap1.png')
-                st.image('shap2.png')
-            
-            st.success(f"Probability of device-associated infection: {model1.predict_proba(test_df)[:, 1][0] * 100:.1f}%")
+            infection_prob = model1.predict_proba(test_df)[:, 1][0]
+            st.success(f"Probability of device-associated infection: {infection_prob * 100:.1f}%")
             
             st.header('30-day Survival Prediction')
             test_df2 = pd.DataFrame([dic2[MICU_or_SICU], dic2[Cancer], float(APSIII), float(Age), float(SAPII), 
@@ -165,42 +136,6 @@ with tab2:
         }
         
         df = pd.DataFrame([input_data])
-        
-        # Calculate impact scores
-        impact_scores = {}
-        baseline_values = {
-            'admission_age': 10,
-            'gender': 0,
-            'has_diabetes': 0,
-            'has_cancer': 0,
-            'has_liver': 0,
-            'has_chf': 0,
-            'has_cva': 0,
-            'chg_adherence_ratio': 0.9,
-            'wbc_mean': 7.5,
-            'plt_mean': 150,
-            'creat_mean': 1.0,
-            'inr_mean': 1.0,
-            'pt_mean': 11,
-            'sofa_score': 0,
-            'apsiii': 40,
-            'sapsii': 30
-        }
-        
-        for feature, value in input_data.items():
-            baseline = baseline_values[feature]
-            test_df = df.copy()
-            baseline_df = df.copy()
-            baseline_df[feature] = baseline
-            
-            test_encoded = pd.get_dummies(test_df).reindex(columns=TRAINING_FEATURES, fill_value=0)
-            baseline_encoded = pd.get_dummies(baseline_df).reindex(columns=TRAINING_FEATURES, fill_value=0)
-            
-            test_prob = model_clabsi.predict_proba(test_encoded)[:, 1][0]
-            baseline_prob = model_clabsi.predict_proba(baseline_encoded)[:, 1][0]
-            
-            impact_scores[feature] = test_prob - baseline_prob
-
         df_encoded = pd.get_dummies(df).reindex(columns=TRAINING_FEATURES, fill_value=0)
         prediction = model_clabsi.predict(df_encoded)
         probability = model_clabsi.predict_proba(df_encoded)[:, 1]
@@ -209,34 +144,14 @@ with tab2:
         st.header(f'Prediction: {risk_level}')
         st.subheader(f'CLABSI Probability: {probability[0]:.1%}')
         
-        impacts = pd.DataFrame({
-            'Feature': list(impact_scores.keys()),
-            'Impact': list(impact_scores.values())
-        }).sort_values('Impact', ascending=True)
+        # Feature importance from model
+        feature_importance = pd.DataFrame({
+            'Feature': TRAINING_FEATURES,
+            'Importance': model_clabsi.feature_importances_
+        }).sort_values('Importance', ascending=True)
         
         fig, ax = plt.subplots(figsize=(10, 6))
-        colors = ['red' if x > 0 else 'green' for x in impacts['Impact']]
-        plt.barh(impacts['Feature'], impacts['Impact'], color=colors)
-        plt.title('Feature Impact on CLABSI Risk')
-        plt.axvline(x=0, color='black', linestyle='-', linewidth=0.5)
+        plt.barh(feature_importance['Feature'], feature_importance['Importance'])
+        plt.title('Feature Importance')
         plt.tight_layout()
         st.pyplot(fig)
-
-        st.subheader("Key Risk Factors:")
-        top_increasing = impacts[impacts['Impact'] > 0].tail(3)
-        top_decreasing = impacts[impacts['Impact'] < 0].head(3)
-        
-        if not top_increasing.empty:
-            st.write("Factors increasing risk:")
-            for _, row in top_increasing.iterrows():
-                st.write(f"• {row['Feature']}: +{row['Impact']*100:.1f}% risk")
-        
-        if not top_decreasing.empty:
-            st.write("Factors decreasing risk:")
-            for _, row in top_decreasing.iterrows():
-                st.write(f"• {row['Feature']}: {row['Impact']*100:.1f}% risk")
-        
-        if not top_decreasing.empty:
-            st.write("Factors decreasing risk:")
-            for _, row in top_decreasing.iterrows():
-                st.write(f"• {row['Feature']}: {row['Impact']*100:.1f}% risk")
