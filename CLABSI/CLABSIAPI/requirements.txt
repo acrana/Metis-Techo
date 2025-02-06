@@ -4,3 +4,5 @@ matplotlib
 numpy
 xgboost
 scikit-learn
+shap
+joblib
