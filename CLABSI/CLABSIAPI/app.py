@@ -6,17 +6,21 @@ import os
 
 st.set_page_config(page_title="CLABSI Risk Prediction", layout="wide")
 
-# Load model and features using relative paths
+# Get absolute path to the directory containing your files
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_PATH = os.path.join(BASE_DIR, 'final_xgb_model.pkl')
+FEATURES_PATH = os.path.join(BASE_DIR, 'training_features.json')
+
 @st.cache_resource
 def load_model():
     try:
-        with open('final_xgb_model.pkl', 'rb') as f:
+        with open(MODEL_PATH, 'rb') as f:
             model = pickle.load(f)
-        with open('training_features.json', 'r') as f:
+        with open(FEATURES_PATH, 'r') as f:
             features = json.load(f)
         return model, features
     except Exception as e:
-        st.error(f"Error loading model: {str(e)}")
+        st.error(f"Error loading model: {str(e)}\nTried path: {MODEL_PATH}")
         return None, None
 
 model, TRAINING_FEATURES = load_model()
@@ -72,14 +76,6 @@ else:
         
         df = pd.DataFrame([input_data])
         df_encoded = pd.get_dummies(df)
-        df_transformed = df_encoded.reindex(columns=TRAINING_FEATURES, fill_value=0)
-        
-        prediction = model.predict(df_transformed)
-        probability = model.predict_proba(df_transformed)[:, 1]
-        
-        risk_level = "High Risk" if prediction[0] == 1 else "Low Risk"
-        st.header(f'Prediction: {risk_level}')
-        st.subheader(f'Probability: {probability[0]:.2%}')
         df_transformed = df_encoded.reindex(columns=TRAINING_FEATURES, fill_value=0)
         
         prediction = model.predict(df_transformed)
