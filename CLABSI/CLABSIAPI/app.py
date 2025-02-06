@@ -4,20 +4,15 @@ import pickle
 import json
 import os
 
-
 st.set_page_config(page_title="CLABSI Risk Prediction", layout="wide")
 
 # Load model and features using relative paths
 @st.cache_resource
 def load_model():
     try:
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        model_path = os.path.join(current_dir, 'final_xgb_model.pkl')
-        features_path = os.path.join(current_dir, 'training_features.json')
-        
-        with open(model_path, 'rb') as f:
+        with open('final_xgb_model.pkl', 'rb') as f:
             model = pickle.load(f)
-        with open(features_path, 'r') as f:
+        with open('training_features.json', 'r') as f:
             features = json.load(f)
         return model, features
     except Exception as e:
@@ -77,6 +72,14 @@ else:
         
         df = pd.DataFrame([input_data])
         df_encoded = pd.get_dummies(df)
+        df_transformed = df_encoded.reindex(columns=TRAINING_FEATURES, fill_value=0)
+        
+        prediction = model.predict(df_transformed)
+        probability = model.predict_proba(df_transformed)[:, 1]
+        
+        risk_level = "High Risk" if prediction[0] == 1 else "Low Risk"
+        st.header(f'Prediction: {risk_level}')
+        st.subheader(f'Probability: {probability[0]:.2%}')
         df_transformed = df_encoded.reindex(columns=TRAINING_FEATURES, fill_value=0)
         
         prediction = model.predict(df_transformed)
