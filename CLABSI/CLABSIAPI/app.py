@@ -33,7 +33,7 @@ else:
     col1, col2 = st.columns(2)
     
     with col1:
-        admission_age = st.number_input('Admission Age', min_value=0, max_value=120)
+        admission_age = st.number_input('Line Age (Days)', min_value=0, max_value=120)
         gender = st.selectbox('Gender', [0, 1], format_func=lambda x: 'Female' if x==0 else 'Male')
         has_diabetes = st.checkbox('Has Diabetes')
         has_cancer = st.checkbox('Has Cancer')
@@ -77,7 +77,7 @@ else:
         # Calculate impact scores
         impact_scores = {}
         baseline_values = {
-            'admission_age': 60,
+            'admission_age': 10,
             'gender': 0,
             'has_diabetes': 0,
             'has_cancer': 0,
@@ -98,12 +98,10 @@ else:
         for feature, value in input_data.items():
             baseline = baseline_values[feature]
             
-            # Create temporary dataframes
             test_df = df.copy()
             baseline_df = df.copy()
             baseline_df[feature] = baseline
             
-            # Get predictions
             test_encoded = pd.get_dummies(test_df).reindex(columns=TRAINING_FEATURES, fill_value=0)
             baseline_encoded = pd.get_dummies(baseline_df).reindex(columns=TRAINING_FEATURES, fill_value=0)
             
