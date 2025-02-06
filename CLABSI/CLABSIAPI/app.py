@@ -3,6 +3,8 @@ import pandas as pd
 import pickle
 import json
 import os
+import shap
+import matplotlib.pyplot as plt
 
 st.set_page_config(page_title="CLABSI Risk Prediction", layout="wide")
 
@@ -84,3 +86,30 @@ else:
         risk_level = "High Risk" if prediction[0] == 1 else "Low Risk"
         st.header(f'Prediction: {risk_level}')
         st.subheader(f'Probability: {probability[0]:.2%}')
+
+        # Calculate SHAP values
+        explainer = shap.TreeExplainer(model)
+        shap_values = explainer.shap_values(df_transformed)
+        
+        if isinstance(shap_values, list):
+            shap_values = shap_values[1]
+            
+        # Create feature importance plot
+        fig, ax = plt.subplots(figsize=(10, 6))
+        feature_importance = pd.DataFrame({
+            'Feature': df_transformed.columns,
+            'Importance': abs(shap_values[0])
+        }).sort_values('Importance', ascending=True)
+        
+        plt.barh(feature_importance['Feature'], feature_importance['Importance'])
+        plt.title('Feature Importance (SHAP values)')
+        plt.tight_layout()
+        st.pyplot(fig)
+        
+        # Show top contributing factors
+        st.subheader("Top Contributing Factors:")
+        top_features = feature_importance.tail(5)
+        for idx, row in top_features.iterrows():
+            value = df_transformed.iloc[0][row['Feature']]
+            impact = "increasing" if shap_values[0][idx] > 0 else "decreasing"
+            st.write(f"{row['Feature']} (value: {value:.2f}): {impact} risk by {abs(shap_values[0][idx]):.3f}")
