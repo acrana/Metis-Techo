@@ -3,12 +3,10 @@ import pandas as pd
 import pickle
 import json
 import os
-import shap
 import matplotlib.pyplot as plt
 
 st.set_page_config(page_title="CLABSI Risk Prediction", layout="wide")
 
-# Get absolute path to the directory containing your files
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_PATH = os.path.join(BASE_DIR, 'final_xgb_model.pkl')
 FEATURES_PATH = os.path.join(BASE_DIR, 'training_features.json')
@@ -87,29 +85,21 @@ else:
         st.header(f'Prediction: {risk_level}')
         st.subheader(f'Probability: {probability[0]:.2%}')
 
-        # Calculate SHAP values
-        explainer = shap.TreeExplainer(model)
-        shap_values = explainer.shap_values(df_transformed)
-        
-        if isinstance(shap_values, list):
-            shap_values = shap_values[1]
-            
-        # Create feature importance plot
-        fig, ax = plt.subplots(figsize=(10, 6))
+        # Feature importance visualization
         feature_importance = pd.DataFrame({
-            'Feature': df_transformed.columns,
-            'Importance': abs(shap_values[0])
+            'Feature': TRAINING_FEATURES,
+            'Importance': model.feature_importances_
         }).sort_values('Importance', ascending=True)
-        
+
+        fig, ax = plt.subplots(figsize=(10, 6))
         plt.barh(feature_importance['Feature'], feature_importance['Importance'])
-        plt.title('Feature Importance (SHAP values)')
+        plt.title('Feature Importance')
         plt.tight_layout()
         st.pyplot(fig)
-        
+
         # Show top contributing factors
         st.subheader("Top Contributing Factors:")
         top_features = feature_importance.tail(5)
-        for idx, row in top_features.iterrows():
+        for _, row in top_features.iterrows():
             value = df_transformed.iloc[0][row['Feature']]
-            impact = "increasing" if shap_values[0][idx] > 0 else "decreasing"
-            st.write(f"{row['Feature']} (value: {value:.2f}): {impact} risk by {abs(shap_values[0][idx]):.3f}")
+            st.write(f"{row['Feature']} (value: {value:.2f}): contributes {row['Importance']:.3f} to the prediction")
