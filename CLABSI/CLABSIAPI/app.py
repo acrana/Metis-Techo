@@ -73,29 +73,81 @@ else:
         }
         
         df = pd.DataFrame([input_data])
-        df_encoded = pd.get_dummies(df)
-        df_transformed = df_encoded.reindex(columns=TRAINING_FEATURES, fill_value=0)
         
-        prediction = model.predict(df_transformed)
-        probability = model.predict_proba(df_transformed)[:, 1]
+        # Calculate impact scores
+        impact_scores = {}
+        baseline_values = {
+            'admission_age': 60,
+            'gender': 0,
+            'has_diabetes': 0,
+            'has_cancer': 0,
+            'has_liver': 0,
+            'has_chf': 0,
+            'has_cva': 0,
+            'chg_adherence_ratio': 0.9,
+            'wbc_mean': 7.5,
+            'plt_mean': 150,
+            'creat_mean': 1.0,
+            'inr_mean': 1.0,
+            'pt_mean': 11,
+            'sofa_score': 0,
+            'apsiii': 40,
+            'sapsii': 30
+        }
         
+        for feature, value in input_data.items():
+            baseline = baseline_values[feature]
+            
+            # Create temporary dataframes
+            test_df = df.copy()
+            baseline_df = df.copy()
+            baseline_df[feature] = baseline
+            
+            # Get predictions
+            test_encoded = pd.get_dummies(test_df).reindex(columns=TRAINING_FEATURES, fill_value=0)
+            baseline_encoded = pd.get_dummies(baseline_df).reindex(columns=TRAINING_FEATURES, fill_value=0)
+            
+            test_prob = model.predict_proba(test_encoded)[:, 1][0]
+            baseline_prob = model.predict_proba(baseline_encoded)[:, 1][0]
+            
+            impact_scores[feature] = test_prob - baseline_prob
+
+        # Original prediction
+        df_encoded = pd.get_dummies(df).reindex(columns=TRAINING_FEATURES, fill_value=0)
+        prediction = model.predict(df_encoded)
+        probability = model.predict_proba(df_encoded)[:, 1]
+        
+        # Display results
         risk_level = "High Risk" if prediction[0] == 1 else "Low Risk"
         st.header(f'Prediction: {risk_level}')
         st.subheader(f'Probability: {probability[0]:.2%}')
-
-        feature_importance = pd.DataFrame({
-            'Feature': TRAINING_FEATURES,
-            'Importance': model.feature_importances_
-        }).sort_values('Importance', ascending=True)
-
+        
+        # Sort and display impacts
+        impacts = pd.DataFrame({
+            'Feature': list(impact_scores.keys()),
+            'Impact': list(impact_scores.values())
+        }).sort_values('Impact', ascending=True)
+        
+        # Plot
         fig, ax = plt.subplots(figsize=(10, 6))
-        plt.barh(feature_importance['Feature'], feature_importance['Importance'])
-        plt.title('Feature Importance')
+        colors = ['red' if x > 0 else 'green' for x in impacts['Impact']]
+        plt.barh(impacts['Feature'], impacts['Impact'], color=colors)
+        plt.title('Feature Impact on Risk (Red = Increases Risk, Green = Decreases Risk)')
+        plt.axvline(x=0, color='black', linestyle='-', linewidth=0.5)
         plt.tight_layout()
         st.pyplot(fig)
 
-        st.subheader("Top Contributing Factors:")
-        top_features = feature_importance.tail(5)
-        for _, row in top_features.iterrows():
-            value = df_transformed.iloc[0][row['Feature']]
-            st.write(f"{row['Feature']} (value: {value:.2f}): contributes {row['Importance']:.3f} to the prediction")
+        # Show top factors
+        st.subheader("Key Risk Factors:")
+        top_increasing = impacts[impacts['Impact'] > 0].tail(3)
+        top_decreasing = impacts[impacts['Impact'] < 0].head(3)
+        
+        if not top_increasing.empty:
+            st.write("Factors increasing risk:")
+            for _, row in top_increasing.iterrows():
+                st.write(f"• {row['Feature']}: +{row['Impact']*100:.1f}% risk")
+        
+        if not top_decreasing.empty:
+            st.write("Factors decreasing risk:")
+            for _, row in top_decreasing.iterrows():
+                st.write(f"• {row['Feature']}: {row['Impact']*100:.1f}% risk")
