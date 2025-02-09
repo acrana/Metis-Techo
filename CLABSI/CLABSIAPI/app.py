@@ -4,35 +4,30 @@ import pandas as pd
 import json
 import os
 
-# ---------------------------------------------------------
-# 1. Locate the current directory of this file (app.py)
-# ---------------------------------------------------------
+# --------------------------------------------------------------------
+# 1. Locate directory of this file and build absolute paths
+# --------------------------------------------------------------------
 base_path = os.path.dirname(os.path.abspath(__file__))
 
-# ---------------------------------------------------------
-# 2. Build absolute paths to your model and JSON files
-# ---------------------------------------------------------
 model_path = os.path.join(base_path, "final_xgb_model.pkl")
 features_path = os.path.join(base_path, "training_features.json")
 
-# ---------------------------------------------------------
-# 3. Load the model and the training features
-# ---------------------------------------------------------
+# --------------------------------------------------------------------
+# 2. Load the model and features
+# --------------------------------------------------------------------
 model = joblib.load(model_path)
 with open(features_path, "r") as f:
     TRAINING_FEATURES = json.load(f)
 
-# ---------------------------------------------------------
-# 4. Streamlit App UI
-# ---------------------------------------------------------
 st.title("Line Risk Prediction")
 
-# Two-column layout for form entries
+# Two-column layout in Streamlit
 col1, col2 = st.columns(2)
 
 with col1:
-    # Show "Line Age" to the user but store as "line_age" locally
+    # Show "Line Age" in the UI, store in variable line_age
     line_age = st.number_input("Line Age", min_value=0, max_value=120)
+    # gender is numeric: 0 for female, 1 for male
     gender = st.selectbox("Gender", [0, 1], format_func=lambda x: "Female" if x == 0 else "Male")
     has_diabetes = st.checkbox("Has Diabetes")
     has_cancer = st.checkbox("Has Cancer")
@@ -51,14 +46,13 @@ with col2:
     apsiii = st.number_input("APSIII Score", min_value=0)
     sapsii = st.number_input("SAPSII Score", min_value=0)
 
-# ---------------------------------------------------------
-# 5. Predict Button
-# ---------------------------------------------------------
+# --------------------------------------------------------------------
+# 3. When user clicks "Predict"
+# --------------------------------------------------------------------
 if st.button("Predict"):
-
-    # Create input dict using the original "admission_age" key
+    # Create input data using the keys your model expects
     input_data = {
-        "admission_age": line_age,  # Model expects this exact key
+        "admission_age": line_age,  # Keep the internal key as "admission_age"
         "gender": gender,
         "has_diabetes": int(has_diabetes),
         "has_cancer": int(has_cancer),
@@ -76,23 +70,31 @@ if st.button("Predict"):
         "sapsii": sapsii
     }
 
-    # Turn this into a DataFrame
+    # Convert to DataFrame
     df = pd.DataFrame([input_data])
 
-    # Force gender to be int (0 or 1) to avoid extra dummies
+    # ---------------------------------------------------------------
+    # If your training used strictly numeric columns (0 or 1 for gender),
+    # you don't need get_dummies. We'll skip it.
+    # ---------------------------------------------------------------
+    # Just ensure "gender" is int (0,1).
     df["gender"] = df["gender"].astype(int)
 
-    # If your model training used get_dummies on any columns, do the same here
-    df_encoded = pd.get_dummies(df)
+    # ---------------------------------------------------------------
+    # Reindex to match your training feature list exactly
+    # ---------------------------------------------------------------
+    df_transformed = df.reindex(columns=TRAINING_FEATURES, fill_value=0)
 
-    # Reindex columns to match the training features exactly
-    df_transformed = df_encoded.reindex(columns=TRAINING_FEATURES, fill_value=0)
+    # DEBUG: Print out the columns to see what's going to the model
+    st.write("Columns in final df_transformed:", df_transformed.columns.tolist())
 
-    # Obtain prediction
+    # ---------------------------------------------------------------
+    # 4. Predict with XGBoost
+    # ---------------------------------------------------------------
     prediction = model.predict(df_transformed)
     probability = model.predict_proba(df_transformed)[:, 1]
 
-    # Interpret results
+    # Map the prediction
     risk_level = "High Risk" if prediction[0] == 1 else "Low Risk"
 
     st.header(f"Prediction: {risk_level}")
