@@ -10,19 +10,18 @@ with open("training_features.json", "r") as f:
 
 st.title('Line Risk Prediction')
 
-# Input form
+# Two-column layout for input fields
 col1, col2 = st.columns(2)
 
 with col1:
-    # Renamed here: Use "Line Age" in the UI, but store in "line_age"
+    # Renamed this to 'Line Age' but will store it in 'admission_age' later
     line_age = st.number_input('Line Age', min_value=0, max_value=120)
-    gender = st.selectbox('Gender', [0, 1], format_func=lambda x: 'Female' if x==0 else 'Male')
+    gender = st.selectbox('Gender', [0, 1], format_func=lambda x: 'Female' if x == 0 else 'Male')
     has_diabetes = st.checkbox('Has Diabetes')
     has_cancer = st.checkbox('Has Cancer')
     has_liver = st.checkbox('Has Liver Disease')
     has_chf = st.checkbox('Has CHF')
     has_cva = st.checkbox('Has CVA')
-    days_since_last_dressing_change = st.number_input('Days Since Last Dressing Change', min_value=0)
     chg_adherence_ratio = st.slider('CHG Adherence Ratio', 0.0, 1.0, 0.5)
 
 with col2:
@@ -36,17 +35,16 @@ with col2:
     sapsii = st.number_input('SAPSII Score', min_value=0)
 
 if st.button('Predict'):
-    # Create input data dictionary
-    # Notice we keep the key as 'admission_age' because your model expects that feature name
+    # Prepare the input data with the key "admission_age" 
+    # since that's what your model was trained on
     input_data = {
-        'admission_age': line_age,
+        'admission_age': line_age,  # Internally still "admission_age"
         'gender': gender,
         'has_diabetes': int(has_diabetes),
         'has_cancer': int(has_cancer),
         'has_liver': int(has_liver),
         'has_chf': int(has_chf),
         'has_cva': int(has_cva),
-        'days_since_last_dressing_change': days_since_last_dressing_change,
         'chg_adherence_ratio': chg_adherence_ratio,
         'wbc_mean': wbc_mean,
         'plt_mean': plt_mean,
@@ -58,16 +56,26 @@ if st.button('Predict'):
         'sapsii': sapsii
     }
 
-    # Transform data
+    # Create DataFrame from input
     df = pd.DataFrame([input_data])
+
+    # Make sure gender remains a single integer column
+    df['gender'] = df['gender'].astype(int)
+
+    # One-hot encode as you did in training (if needed)
     df_encoded = pd.get_dummies(df)
+
+    # Align columns with what the model expects
     df_transformed = df_encoded.reindex(columns=TRAINING_FEATURES, fill_value=0)
 
-    # Get prediction
+    # Get prediction and probability
     prediction = model.predict(df_transformed)
     probability = model.predict_proba(df_transformed)[:, 1]
 
-    # Display results
+    # Output results
     risk_level = "High Risk" if prediction[0] == 1 else "Low Risk"
+    st.header(f'Prediction: {risk_level}')
+    st.subheader(f'Probability: {probability[0]:.2%}')
+
     st.header(f'Prediction: {risk_level}')
     st.subheader(f'Probability: {probability[0]:.2%}')
