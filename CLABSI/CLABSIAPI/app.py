@@ -67,7 +67,3 @@ st.subheader(f"Probability: {probability[0]:.2%}")
 # Debug / Inspect
 # st.write("Input data:", df)
 # st.write("Transformed data:", df_transformed)
-
-    risk_level = "High Risk" if prediction[0] == 1 else "Low Risk"
-    st.header(f"Prediction: {risk_level}")
-    st.subheader(f"Probability: {probability[0]:.2%}")
