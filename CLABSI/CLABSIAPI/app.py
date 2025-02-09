@@ -14,7 +14,8 @@ st.title('Line Risk Prediction')
 col1, col2 = st.columns(2)
 
 with col1:
-    admission_age = st.number_input('Admission Age', min_value=0, max_value=120)
+    # Renamed here: Use "Line Age" in the UI, but store in "line_age"
+    line_age = st.number_input('Line Age', min_value=0, max_value=120)
     gender = st.selectbox('Gender', [0, 1], format_func=lambda x: 'Female' if x==0 else 'Male')
     has_diabetes = st.checkbox('Has Diabetes')
     has_cancer = st.checkbox('Has Cancer')
@@ -36,8 +37,9 @@ with col2:
 
 if st.button('Predict'):
     # Create input data dictionary
+    # Notice we keep the key as 'admission_age' because your model expects that feature name
     input_data = {
-        'admission_age': admission_age,
+        'admission_age': line_age,
         'gender': gender,
         'has_diabetes': int(has_diabetes),
         'has_cancer': int(has_cancer),
