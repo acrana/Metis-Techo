@@ -1,0 +1,144 @@
+import requests
+from urllib.parse import urlencode
+import webbrowser
+from http.server import HTTPServer, BaseHTTPRequestHandler
+import threading
+from urllib.parse import parse_qs, urlparse
+
+# Global variable to store the authorization code
+auth_code = None
+
+class CallbackHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        global auth_code
+        query_components = parse_qs(urlparse(self.path).query)
+        
+        if 'code' in query_components:
+            auth_code = query_components['code'][0]
+            
+        self.send_response(200)
+        self.send_header('Content-type', 'text/html')
+        self.end_headers()
+        self.wfile.write(b"Authorization received. You can close this window.")
+        
+        threading.Thread(target=self.server.shutdown).start()
+
+    def log_message(self, format, *args):
+        pass
+
+class VeradigmFHIRClient:
+    def __init__(self):
+        # URLs for R4
+        self.base_url = "https://fhir.fhirpoint.open.allscripts.com/fhirroute/fhir/CP00101/"
+        self.auth_url = "https://fhir.fhirpoint.open.allscripts.com/fhirroute/authorizationV2/CP00101/connect/authorize"
+        self.token_url = "https://fhir.fhirpoint.open.allscripts.com/fhirroute/authorizationV2/CP00101/connect/token"
+        
+        # Credentials
+        self.client_id = "****"          # Your app's client ID
+        self.client_secret = "****"      # Your app's client secret
+        self.redirect_uri = "http://localhost:8080/callback"
+        
+        # EHR credentials
+        self.ehr_username = "****"       # Your EHR username
+        self.ehr_password = "****"       # Your EHR password
+        
+        self.token = None
+
+    def start_auth_server(self):
+        server = HTTPServer(('localhost', 8080), CallbackHandler)
+        server.serve_forever()
+
+    def get_authorization(self):
+        # R4 scopes that require explicit Veradigm approval
+        auth_params = {
+            'response_type': 'code',
+            'client_id': self.client_id,
+            'redirect_uri': self.redirect_uri,
+            'scope': 'launch user/*.read',  # R4 scope - will fail without Veradigm approval
+            'state': '12345'
+        }
+        
+        auth_url = f"{self.auth_url}?{urlencode(auth_params)}"
+        
+        print("\nOpening browser for authorization...")
+        print(f"Auth URL: {auth_url}")
+        
+        server_thread = threading.Thread(target=self.start_auth_server)
+        server_thread.daemon = True
+        server_thread.start()
+        
+        webbrowser.open(auth_url)
+        
+        print("\nWaiting for authorization...")
+        server_thread.join()
+        
+        return auth_code
+
+    def get_token(self, code):
+        try:
+            token_data = {
+                'grant_type': 'authorization_code',
+                'code': code,
+                'redirect_uri': self.redirect_uri,
+                'client_id': self.client_id,
+                'client_secret': self.client_secret
+            }
+
+            print("\nExchanging code for token...")
+            
+            response = requests.post(
+                self.token_url,
+                data=token_data,
+                headers={
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Accept': 'application/json'
+                }
+            )
+
+            print(f"Token Response Status: {response.status_code}")
+            print(f"Response: {response.text}")
+
+            if response.status_code == 200:
+                token_response = response.json()
+                self.token = token_response.get('access_token')
+                return True
+            return False
+
+        except Exception as e:
+            print(f"Error getting token: {str(e)}")
+            return False
+
+    def search_devices(self):
+        """Search for devices once authenticated"""
+        if not self.token:
+            if not self.get_token(auth_code):
+                return
+
+        try:
+            headers = {
+                'Authorization': f'Bearer {self.token}',
+                'Accept': 'application/fhir+json'
+            }
+            
+            # Search using SNOMED CT code for central venous catheter
+            response = requests.get(
+                f"{self.base_url}Device",
+                headers=headers,
+                params={
+                    'type': 'http://snomed.info/sct|52124006',
+                    '_format': 'json'
+                }
+            )
+            
+            print(f"Search Response Status: {response.status_code}")
+            print(f"Response: {response.text}")
+            
+        except Exception as e:
+            print(f"Error searching devices: {str(e)}")
+
+if __name__ == "__main__":
+    client = VeradigmFHIRClient()
+    print("Starting authorization flow...")
+    code = client.get_authorization()
+    if code:
+        client.get_token(code)
