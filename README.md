@@ -7,7 +7,6 @@ Welcome to my portfolio exploring technology's potential to improve healthcare d
 ### [AI-Powered Clinical Decision Support System (AICDSS)](https://github.com/acrana/Metis-Techo/tree/main/AICDSS)
 
 METIS, named after the Greek Titan goddess of wisdom, combines machine learning with clinical data to enhance medical decision-making. This learning project features:
-- Real-time patient vital monitoring
 - ML-driven risk prediction with PyTorch
 - Medication interaction analysis
 - Clinical trend visualization
