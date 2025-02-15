@@ -26,53 +26,43 @@ METIS is an AI-powered Clinical Decision Support System that helps healthcare pr
 
 
 
-##Current:
-PHASE 1: Foundation
-REBUILD FOUNDATION (Current Focus)
+# PHASE 1: Foundation - REBUILD FOUNDATION (Current Focus)
 
-PostgreSQL/MIMIC IV Integration
+## PostgreSQL/MIMIC IV Integration
+- **Single PostgreSQL connection manager**
+- Replace all synthetic data/SQLite code
+- Build efficient query system for vitals, labs, and meds
+- Create fast patient search and browsing
+- Implement proper data caching
 
-Single PostgreSQL connection manager
-Replace all synthetic data/SQLite code
-Build efficient query system for vitals, labs, meds
-Create fast patient search and browsing
-Implement proper data caching
+## Medication System with Real Data
+- **Real medication data from MIMIC prescriptions/eMAR**
+- Integrate actual drug interactions from data
+- Simulate medication orders (read-only)
+- Assess drug risk using real patient outcomes
+- Maintain existing UI but feed it real data
 
+## Clinical Data Viewer
+- **Comprehensive patient browser**
+- Lab result visualization
+- Vital sign trending
+- Clinical note viewing
+- Ensure all components are FHIR-ready
 
-Medication System with Real Data
+---
 
-Real medication data from MIMIC prescriptions/emar
-Actual drug interactions from data
-Medication order simulation (read-only)
-Drug risk assessment using real patient outcomes
-Keep existing UI but feed it real data
+# FUTURE-PROOFING (Built Into Foundation)
 
+## FHIR Preparation
+- **Design data models to be FHIR-compatible from the start**
+- Plan NDJSON support in data structures
+- Leverage MIMIC's existing LOINC/RxNorm mappings
+- Enable data retrieval to be FHIR-transformable
+- Structure exports for FHIR conversion
 
-Clinical Data Viewer
-
-Comprehensive patient browser
-Lab result visualization
-Vital sign trending
-Clinical note viewing
-Make all components FHIR-ready
-
-
-
-FUTURE-PROOFING (Built Into Foundation)
-
-FHIR Preparation
-
-Design data models FHIR-compatible from start
-Plan NDJSON support in data structures
-Use MIMIC's existing LOINC/RxNorm mappings
-Make data retrieval FHIR-transformable
-Structure exports for FHIR conversion
-
-
-ML Model Framework
-
-Create extensible prediction framework
-Design for CLABSI/stroke model addition
-Build flexible data pipeline
-Make components pluggable
-Plan result storage/visualization
+## ML Model Framework
+- **Create an extensible prediction framework**
+- Design for the addition of CLABSI/stroke models
+- Build a flexible data pipeline
+- Make components pluggable
+- Plan for result storage and visualization
