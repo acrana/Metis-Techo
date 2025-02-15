@@ -27,50 +27,52 @@ METIS is an AI-powered Clinical Decision Support System that helps healthcare pr
 
 
 ##Current:
-Rebuilding METIS
+PHASE 1: Foundation
+REBUILD FOUNDATION (Current Focus)
 
-Foundation (MIMIC IV Integration)
+PostgreSQL/MIMIC IV Integration
 
-Map essential MIMIC tables
-Create SQLAlchemy models
-Build efficient query system
-Implement data caching
-Create test queries
-
-
-Core Clinical Data Browser
-
-Patient demographics
-Lab results viewer
-Vital signs display
-Medication history
-Basic visualizations
+Single PostgreSQL connection manager
+Replace all synthetic data/SQLite code
+Build efficient query system for vitals, labs, meds
+Create fast patient search and browsing
+Implement proper data caching
 
 
-Medication System
+Medication System with Real Data
 
-Real prescription data
-Actual drug interactions
-Administration records
-Order simulation
-Risk assessment with real data
-
-
-ML Integration
-
-CLABSI prediction
-Stroke prediction
-Real outcomes analysis
-Model validation
-Prediction interface
+Real medication data from MIMIC prescriptions/emar
+Actual drug interactions from data
+Medication order simulation (read-only)
+Drug risk assessment using real patient outcomes
+Keep existing UI but feed it real data
 
 
-FHIR Layer
+Clinical Data Viewer
 
-Resource mapping
-NDJSON handling
-Data validation
-Export/import capabilities
+Comprehensive patient browser
+Lab result visualization
+Vital sign trending
+Clinical note viewing
+Make all components FHIR-ready
 
 
 
+FUTURE-PROOFING (Built Into Foundation)
+
+FHIR Preparation
+
+Design data models FHIR-compatible from start
+Plan NDJSON support in data structures
+Use MIMIC's existing LOINC/RxNorm mappings
+Make data retrieval FHIR-transformable
+Structure exports for FHIR conversion
+
+
+ML Model Framework
+
+Create extensible prediction framework
+Design for CLABSI/stroke model addition
+Build flexible data pipeline
+Make components pluggable
+Plan result storage/visualization
