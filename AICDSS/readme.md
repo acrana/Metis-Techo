@@ -25,8 +25,8 @@ METIS is an AI-powered Clinical Decision Support System that helps healthcare pr
 * SQLite
 
 
-########################################
-Current:
+
+##Current:
 Rebuilding METIS
 
 Foundation (MIMIC IV Integration)
