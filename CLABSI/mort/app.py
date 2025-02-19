@@ -19,18 +19,13 @@ expected_features = [
     "inr_mean", "age", "has_ostomy", "liver_disease", "aniongap_mean"
 ]
 
-def map_lines(num_lines):
-    if num_lines == 1:
-        return [1, 0, 0, 0]
-    elif num_lines == 2:
-        return [0, 1, 0, 0]
-    elif num_lines == 3:
-        return [0, 0, 1, 0]
-    else:
-        return [0, 0, 0, 1]
+def map_lines(num):
+    if num == 1: return [1, 0, 0, 0]
+    elif num == 2: return [0, 1, 0, 0]
+    elif num == 3: return [0, 0, 1, 0]
+    else: return [0, 0, 0, 1]
 
 def predict_mortality(input_dict):
-    # Convert inputs to float array and replace any NaNs with 0
     data = np.array([input_dict[feat] for feat in expected_features], dtype=float).reshape(1, -1)
     data = np.nan_to_num(data)
     return model.predict_proba(data)[0, 1]
@@ -41,13 +36,12 @@ st.markdown("Enter patient information below:")
 input_data = {}
 
 st.subheader("Central Line Information")
-num_lines = st.number_input("Number of Central Lines", min_value=1, max_value=10, value=1, step=1,
-                            help="Enter how many different central line types the patient has.")
-lines_encoded = map_lines(num_lines)
-input_data["n_line_types_1"] = lines_encoded[0]
-input_data["n_line_types_2"] = lines_encoded[1]
-input_data["n_line_types_3"] = lines_encoded[2]
-input_data["n_line_types_4"] = lines_encoded[3]
+num_lines = st.number_input("Number of Central Lines", min_value=1, max_value=10, value=1, step=1, help="Enter how many different central line types the patient has.")
+lines = map_lines(num_lines)
+input_data["n_line_types_1"] = lines[0]
+input_data["n_line_types_2"] = lines[1]
+input_data["n_line_types_3"] = lines[2]
+input_data["n_line_types_4"] = lines[3]
 
 st.subheader("Patient Characteristics")
 col1, col2 = st.columns(2)
