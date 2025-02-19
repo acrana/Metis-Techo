@@ -1,11 +1,13 @@
 import streamlit as st
 import numpy as np
+import os
 import joblib
 
 st.sidebar.markdown("# Disclaimer\n**Please note:** This app is a personal project and is not intended for serious medical use. It is designed for educational and demonstration purposes only.")
 
+model_path = os.path.join(os.path.dirname(__file__), "mortality_model.pkl")
 try:
-    model = joblib.load("mortality_model.pkl")
+    model = joblib.load(model_path)
 except Exception as e:
     st.error(f"Error loading model: {e}")
     st.stop()
@@ -37,8 +39,7 @@ st.markdown("Enter patient information below:")
 input_data = {}
 
 st.subheader("Central Line Information")
-num_lines = st.number_input("Number of Central Lines", min_value=1, max_value=10, value=1, step=1,
-                            help="Enter how many different central line types the patient has.")
+num_lines = st.number_input("Number of Central Lines", min_value=1, max_value=10, value=1, step=1, help="Enter how many different central line types the patient has.")
 lines_encoded = map_lines(num_lines)
 input_data["n_line_types_1"] = lines_encoded[0]
 input_data["n_line_types_2"] = lines_encoded[1]
