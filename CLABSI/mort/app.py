@@ -1,12 +1,11 @@
 import streamlit as st
 import numpy as np
-import pickle
+import joblib
 
 st.sidebar.markdown("# Disclaimer\n**Please note:** This app is a personal project and is not intended for serious medical use. It is designed for educational and demonstration purposes only.")
 
 try:
-    with open("mortality_model.pkl", "rb") as f:
-        model = pickle.load(f)
+    model = joblib.load("mortality_model.pkl")
 except Exception as e:
     st.error(f"Error loading model: {e}")
     st.stop()
@@ -35,10 +34,12 @@ def predict_mortality(input_dict):
 st.title("30-Day Mortality Prediction App")
 st.markdown("Enter patient information below:")
 
-st.subheader("Central Line Information")
-num_lines = st.number_input("Number of Central Lines", min_value=1, max_value=10, value=1, step=1, help="Enter how many different central line types the patient has.")
-lines_encoded = map_lines(num_lines)
 input_data = {}
+
+st.subheader("Central Line Information")
+num_lines = st.number_input("Number of Central Lines", min_value=1, max_value=10, value=1, step=1,
+                            help="Enter how many different central line types the patient has.")
+lines_encoded = map_lines(num_lines)
 input_data["n_line_types_1"] = lines_encoded[0]
 input_data["n_line_types_2"] = lines_encoded[1]
 input_data["n_line_types_3"] = lines_encoded[2]
