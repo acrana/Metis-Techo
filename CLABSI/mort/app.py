@@ -30,7 +30,9 @@ def map_lines(num_lines):
         return [0, 0, 0, 1]
 
 def predict_mortality(input_dict):
-    data = np.array([input_dict[feat] for feat in expected_features]).reshape(1, -1)
+    # Convert inputs to float array and replace any NaNs with 0
+    data = np.array([input_dict[feat] for feat in expected_features], dtype=float).reshape(1, -1)
+    data = np.nan_to_num(data)
     return model.predict_proba(data)[0, 1]
 
 st.title("30-Day Mortality Prediction App")
@@ -39,7 +41,8 @@ st.markdown("Enter patient information below:")
 input_data = {}
 
 st.subheader("Central Line Information")
-num_lines = st.number_input("Number of Central Lines", min_value=1, max_value=10, value=1, step=1, help="Enter how many different central line types the patient has.")
+num_lines = st.number_input("Number of Central Lines", min_value=1, max_value=10, value=1, step=1,
+                            help="Enter how many different central line types the patient has.")
 lines_encoded = map_lines(num_lines)
 input_data["n_line_types_1"] = lines_encoded[0]
 input_data["n_line_types_2"] = lines_encoded[1]
