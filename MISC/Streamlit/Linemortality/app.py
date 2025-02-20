@@ -3,9 +3,17 @@ import joblib
 import pandas as pd
 import numpy as np
 
-# Load the model package
-model_package = joblib.load('mortality_prediction_model.joblib')
-model = model_package['model']
+# Define the file path
+model_filename = 'mortality_prediction_model.joblib'
+
+# Check if the file exists
+if not os.path.exists(model_filename):
+    st.error(f"Model file '{model_filename}' not found! Check the file path.")
+    st.stop()  # Stop execution if the file is missing
+
+# Load the model if the file exists
+model_package = joblib.load(model_filename)
+
 feature_names = model_package['feature_names']
 feature_ranges = model_package['feature_ranges']
 
