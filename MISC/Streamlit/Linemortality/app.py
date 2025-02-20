@@ -14,12 +14,6 @@ if not os.path.exists(model_path):
     st.stop()
 
 # Load the model package
-import streamlit as st
-import joblib
-import pandas as pd
-import numpy as np
-
-# Load the model package
 model_package = joblib.load('mortality_prediction_model.joblib')
 model = model_package['model']
 feature_names = model_package['feature_names']
