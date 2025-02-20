@@ -19,6 +19,20 @@ feature_names = model_package['feature_names']
 feature_ranges = model_package['feature_ranges']
 risk_thresholds = model_package.get('risk_thresholds', [0.2, 0.4])
 
+# Set realistic defaults for numerical features
+realistic_defaults = {
+    "age": 65,  # Average ICU patient age
+    "heart_rate": 85,  # Normal HR in ICU patients
+    "sbp": 120,  # Systolic blood pressure
+    "dbp": 70,  # Diastolic blood pressure
+    "mbp": 90,  # Mean arterial pressure
+    "resp_rate": 18,  # Respiratory rate
+    "temperature": 37.0,  # Normal body temperature
+    "spo2": 97,  # Oxygen saturation
+    "apsiii_score": 50,  # APS-III Severity Score (0-100)
+    "sapsii_score": 40  # SAPS-II Score (0-163)
+}
+
 # UI Title
 st.title('30-Day Mortality Prediction After Central Line Insertion')
 
@@ -35,13 +49,19 @@ input_data = {}
 with st.form("input_form"):
     for i, feature in enumerate(feature_names):
         with col1 if i % 2 == 0 else col2:  # Distribute inputs across two columns
-            input_data[feature] = st.number_input(
-                f'{feature.replace("_", " ").title()}',
-                min_value=float(feature_ranges[feature]['min']),
-                max_value=float(feature_ranges[feature]['max']),
-                value=float(feature_ranges[feature]['mean']),
-                step=0.01
-            )
+            if feature in ['cancer', 'liver_disease', 'cva', 'rrt', 'multiple_lines']:
+                # Checkbox for binary conditions (Yes = 1, No = 0)
+                input_data[feature] = int(st.checkbox(f'{feature.replace("_", " ").title()}'))
+            else:
+                # Use realistic defaults where applicable
+                default_value = realistic_defaults.get(feature, feature_ranges[feature]['mean'])
+                input_data[feature] = st.number_input(
+                    f'{feature.replace("_", " ").title()}',
+                    min_value=float(feature_ranges[feature]['min']),
+                    max_value=float(feature_ranges[feature]['max']),
+                    value=float(default_value),
+                    step=0.01
+                )
 
     # Submit button inside the form
     submit_button = st.form_submit_button("Predict Risk")
@@ -88,5 +108,4 @@ st.sidebar.write("**Risk Categories:**")
 st.sidebar.write(f"- Low: < {risk_thresholds[0]*100:.0f}% mortality risk")
 st.sidebar.write(f"- Medium: {risk_thresholds[0]*100:.0f}% - {risk_thresholds[1]*100:.0f}% mortality risk")
 st.sidebar.write(f"- High: > {risk_thresholds[1]*100:.0f}% mortality risk")
-
 
