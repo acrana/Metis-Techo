@@ -4,13 +4,9 @@ import os
 import numpy as np
 import urllib.request
 
-# App Title
 st.title("30-Day Mortality Prediction App")
-
-# Disclaimer
 st.write("**Note:** This tool is for self-learning purposes only and is not intended for clinical decision-making.")
 
-# Model file settings
 MODEL_FILENAME = "xgboost_mortality.pkl"
 MODEL_URL = "https://raw.githubusercontent.com/acrana/Metis-Techo/main/MISC/Streamlit/Linemortality/xgboost_mortality.pkl"
 
@@ -29,7 +25,6 @@ except Exception as e:
     st.error(f"Error loading model: {e}")
     st.stop()
 
-# Define feature categories
 binary_features = ['cancer', 'cva', 'rrt', 'liver_disease', 'multiple_lines']
 numeric_features = ['apsiii_score', 'sapsii_score', 'age', 'inr_mean', 'aniongap_mean', 
                     'pt_mean', 'sodium_mean', 'resp_rate_mean', 'temperature_mean', 'spo2_mean']
@@ -41,19 +36,18 @@ user_input = {}
 for feature in binary_features:
     user_input[feature] = st.sidebar.radio(f"{feature.replace('_', ' ').title()}:", [0, 1], index=0)
 
-# Numeric inputs
+# Numeric inputs (ensure consistent float values)
+default_values = {'age': 65.0, 'apsiii_score': 30.0, 'sapsii_score': 30.0}
+
 for feature in numeric_features:
-    default_values = {'age': 65, 'apsiii_score': 30, 'sapsii_score': 30}
     user_input[feature] = st.sidebar.number_input(
         f"{feature.replace('_', ' ').title()}:", 
         min_value=0.0, max_value=1000.0, 
-        value=default_values.get(feature, 10)
+        value=default_values.get(feature, 10.0)  # Ensure default values are float
     )
 
-# Convert input to array
 input_data = np.array(list(user_input.values())).reshape(1, -1)
 
-# Predict
 if st.sidebar.button("Predict Mortality Risk"):
     prediction_prob = model.predict_proba(input_data)[0][1]
     st.subheader("Prediction Result")
@@ -68,3 +62,4 @@ if st.sidebar.button("Predict Mortality Risk"):
 
 st.sidebar.subheader("User Inputs")
 st.sidebar.write(user_input)
+
