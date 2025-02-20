@@ -4,6 +4,7 @@ import os
 import numpy as np
 import urllib.request
 import pandas as pd
+from sklearn.preprocessing import StandardScaler
 
 # Page title and disclaimer
 st.set_page_config(page_title="30-Day Mortality Upon Central Line Insertion", layout="centered")
@@ -69,20 +70,28 @@ rrt = binary_mapping[rrt]
 liver_disease = binary_mapping[liver_disease]
 multiple_lines = binary_mapping[multiple_lines]
 
-# Fix sodium scaling issue
-sodium_mean = (sodium_mean - 140) / 5  # Normalize sodium to reduce its impact
+# Fix scaling issues with SpO2, Age, and Temperature
+spo2_mean = (spo2_mean - 98) / 2  # Normalize SpO2 (mean ~98%, std ~2%)
+age = (age - 65) / 10  # Normalize Age (mean ~65, std ~10)
+temperature_mean = (temperature_mean - 37) / 0.5  # Normalize Temp (mean ~37°C, std ~0.5)
+sodium_mean = (sodium_mean - 140) / 5  # Normalize Sodium
 
-# Prepare input for prediction
-input_data = np.array([[apsiii_score, sapsii_score, cancer, age, cva, rrt, inr_mean, liver_disease, 
-                         multiple_lines, aniongap_mean, pt_mean, sodium_mean, resp_rate_mean, 
-                         temperature_mean, spo2_mean]])
+# Standardize all numeric inputs
+scaler = StandardScaler()
+numeric_values = np.array([[apsiii_score, sapsii_score, age, inr_mean, aniongap_mean, 
+                            pt_mean, sodium_mean, resp_rate_mean, temperature_mean, spo2_mean]])
+
+scaled_numeric_values = scaler.fit_transform(numeric_values)
+
+# Combine scaled numeric values with binary features
+input_data = np.hstack((scaled_numeric_values, [[cancer, cva, rrt, liver_disease, multiple_lines]]))
 
 # Debug: Show input values before model prediction
 st.markdown("### 🔍 Debugging: Model Input Values")
 input_df = pd.DataFrame(input_data, columns=[
-    'apsiii_score', 'sapsii_score', 'cancer', 'age', 'cva', 'rrt', 'inr_mean', 
-    'liver_disease', 'multiple_lines', 'aniongap_mean', 'pt_mean', 'sodium_mean', 
-    'resp_rate_mean', 'temperature_mean', 'spo2_mean'
+    'apsiii_score', 'sapsii_score', 'age', 'inr_mean', 'aniongap_mean', 
+    'pt_mean', 'sodium_mean', 'resp_rate_mean', 'temperature_mean', 'spo2_mean',
+    'cancer', 'cva', 'rrt', 'liver_disease', 'multiple_lines'
 ])
 st.dataframe(input_df)
 
@@ -94,9 +103,9 @@ if st.button("Predict 30-Day Mortality Risk", use_container_width=True):
     
     # Get feature importances
     feature_importances = model.feature_importances_
-    feature_names = ['apsiii_score', 'sapsii_score', 'cancer', 'age', 'cva', 'rrt', 'inr_mean', 
-                     'liver_disease', 'multiple_lines', 'aniongap_mean', 'pt_mean', 'sodium_mean', 
-                     'resp_rate_mean', 'temperature_mean', 'spo2_mean']
+    feature_names = ['apsiii_score', 'sapsii_score', 'age', 'inr_mean', 'aniongap_mean', 
+                     'pt_mean', 'sodium_mean', 'resp_rate_mean', 'temperature_mean', 'spo2_mean',
+                     'cancer', 'cva', 'rrt', 'liver_disease', 'multiple_lines']
     
     # Multiply importances by input values to see what contributes most
     impact_scores = np.abs(feature_importances * input_data.flatten())
@@ -125,5 +134,4 @@ if st.button("Predict 30-Day Mortality Risk", use_container_width=True):
     importance_df = pd.DataFrame({"Feature": feature_names, "Importance": feature_importances})
     importance_df = importance_df.sort_values(by="Importance", ascending=False)
     st.dataframe(importance_df)
-
 
