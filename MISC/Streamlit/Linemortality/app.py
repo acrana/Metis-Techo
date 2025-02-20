@@ -4,20 +4,25 @@ import joblib
 import pandas as pd
 import numpy as np
 
-# Get the absolute path of the model file
+# Load the model package
 model_filename = 'mortality_prediction_model.joblib'
 model_path = os.path.join(os.path.dirname(__file__), model_filename)
 
-# Check if the file exists
 if not os.path.exists(model_path):
     st.error(f"⚠️ Model file '{model_filename}' not found! Ensure it's in the same directory as this script.")
     st.stop()
 
-# Load the model package
 model_package = joblib.load(model_path)
 model = model_package['model']
 feature_names = model_package['feature_names']
 feature_ranges = model_package['feature_ranges']
+
+# Load the scaler if it was used during training
+scaler = model_package.get('scaler', None)
+
+if not scaler:
+    st.error("Scaler not found in model package. Ensure it's included during training.")
+    st.stop()
 
 # UI Title
 st.title('30-Day Mortality Prediction After Central Line Insertion')
@@ -31,23 +36,15 @@ Provide the required patient parameters to estimate mortality risk.
 col1, col2 = st.columns(2)
 input_data = {}
 
-# Create input fields using a form for better UI
+# Create input fields using a form
 with st.form("input_form"):
     for i, feature in enumerate(feature_names):
         with col1 if i % 2 == 0 else col2:  # Distribute inputs across two columns
             if feature in ['cancer', 'liver_disease', 'cva', 'rrt', 'multiple_lines']:
                 input_data[feature] = st.checkbox(f'{feature.replace("_", " ").title()}')
             
-            elif feature in ['apsiii_score', 'sapsii_score']:
-                input_data[feature] = st.slider(
-                    f'{feature.replace("_", " ").title()} (scaled)', 
-                    min_value=0.0,
-                    max_value=1.0,
-                    value=feature_ranges[feature]['mean'],
-                    step=0.01
-                )
-            
             else:
+                # Accept real-world values instead of scaled values
                 input_data[feature] = st.number_input(
                     f'{feature.replace("_", " ").title()}',
                     min_value=float(feature_ranges[feature]['min']),
@@ -62,9 +59,12 @@ with st.form("input_form"):
 if submit_button:
     # Convert input into DataFrame
     input_df = pd.DataFrame([input_data])
-    
+
+    # Apply MinMax Scaling to match model training data
+    scaled_input = scaler.transform(input_df)
+
     # Make prediction
-    probability = model.predict_proba(input_df)[0][1]
+    probability = model.predict_proba(scaled_input)[0][1]
     
     # Define risk category
     if probability < 0.2:
@@ -101,3 +101,4 @@ st.sidebar.write("**Risk Categories:**")
 st.sidebar.write("- Low: < 20% mortality risk")
 st.sidebar.write("- Medium: 20-40% mortality risk")
 st.sidebar.write("- High: > 40% mortality risk")
+
