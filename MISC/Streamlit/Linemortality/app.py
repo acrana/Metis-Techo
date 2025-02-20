@@ -53,13 +53,15 @@ with st.form("input_form"):
                 # Checkbox for binary conditions (Yes = 1, No = 0)
                 input_data[feature] = int(st.checkbox(f'{feature.replace("_", " ").title()}'))
             else:
-                # Use realistic defaults where applicable
+                # Ensure default values are within valid feature ranges
                 default_value = realistic_defaults.get(feature, feature_ranges[feature]['mean'])
+                safe_default_value = min(max(default_value, feature_ranges[feature]['min']), feature_ranges[feature]['max'])
+
                 input_data[feature] = st.number_input(
                     f'{feature.replace("_", " ").title()}',
                     min_value=float(feature_ranges[feature]['min']),
                     max_value=float(feature_ranges[feature]['max']),
-                    value=float(default_value),
+                    value=float(safe_default_value),
                     step=0.01
                 )
 
