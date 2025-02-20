@@ -14,90 +14,102 @@ if not os.path.exists(model_path):
     st.stop()
 
 # Load the model package
-model_package = joblib.load(model_path)
+import streamlit as st
+import joblib
+import pandas as pd
+import numpy as np
+
+# Load the model package
+model_package = joblib.load('mortality_prediction_model.joblib')
 model = model_package['model']
 feature_names = model_package['feature_names']
 feature_ranges = model_package['feature_ranges']
 
-# UI Title
 st.title('30-Day Mortality Prediction After Central Line Insertion')
 
 st.write("""
 ### Enter Patient Information
-Provide the required patient parameters to estimate mortality risk.
+Please input the following values to predict 30-day mortality risk.
 """)
 
-# Arrange inputs in two columns
-col1, col2 = st.columns(2)
+# Create input fields for each feature
 input_data = {}
 
-# Create input fields using a form for better UI
-with st.form("input_form"):
-    for i, feature in enumerate(feature_names):
-        with col1 if i % 2 == 0 else col2:  # Distribute inputs across two columns
-            if feature in ['cancer', 'liver_disease', 'cva', 'rrt', 'multiple_lines']:
-                input_data[feature] = st.checkbox(f'{feature.replace("_", " ").title()}')
-            
-            elif feature in ['apsiii_score', 'sapsii_score']:
-                input_data[feature] = st.slider(
-                    f'{feature.replace("_", " ").title()} (scaled)', 
-                    min_value=0.0,
-                    max_value=1.0,
-                    value=feature_ranges[feature]['mean'],
-                    step=0.01
-                )
-            
-            else:
-                input_data[feature] = st.number_input(
-                    f'{feature.replace("_", " ").title()}',
-                    min_value=float(feature_ranges[feature]['min']),
-                    max_value=float(feature_ranges[feature]['max']),
-                    value=float(feature_ranges[feature]['mean']),
-                    step=0.01
-                )
+for feature in feature_names:
+    # Create appropriate input widgets based on feature type
+    if feature in ['cancer', 'liver_disease', 'cva', 'rrt', 'multiple_lines']:
+        # Binary features
+        input_data[feature] = st.checkbox(f'{feature.replace("_", " ").title()}')
+    
+    elif feature == 'apsiii_score':
+        input_data[feature] = st.slider(
+            'APSIII Score (scaled)', 
+            min_value=0.0,
+            max_value=1.0,
+            value=feature_ranges[feature]['mean'],
+            step=0.01
+        )
+    
+    elif feature == 'sapsii_score':
+        input_data[feature] = st.slider(
+            'SAPSII Score (scaled)', 
+            min_value=0.0,
+            max_value=1.0,
+            value=feature_ranges[feature]['mean'],
+            step=0.01
+        )
+    
+    else:
+        # Continuous features
+        input_data[feature] = st.number_input(
+            f'{feature.replace("_", " ").title()}',
+            min_value=float(feature_ranges[feature]['min']),
+            max_value=float(feature_ranges[feature]['max']),
+            value=float(feature_ranges[feature]['mean']),
+            step=0.01
+        )
 
-    # Submit button inside the form
-    submit_button = st.form_submit_button("Predict Risk")
-
-if submit_button:
-    # Convert input into DataFrame
+if st.button('Predict Risk'):
+    # Create DataFrame with input data
     input_df = pd.DataFrame([input_data])
     
     # Make prediction
     probability = model.predict_proba(input_df)[0][1]
     
-    # Define risk category
+    # Determine risk category
     if probability < 0.2:
-        risk_category, color = 'Low', 'green'
+        risk_category = 'Low'
+        color = 'green'
     elif probability < 0.4:
-        risk_category, color = 'Medium', 'orange'
+        risk_category = 'Medium'
+        color = 'orange'
     else:
-        risk_category, color = 'High', 'red'
+        risk_category = 'High'
+        color = 'red'
     
     # Display results
-    st.subheader("Prediction Results")
-    st.metric(label="30-Day Mortality Probability", value=f"{probability:.1%}")
-    st.markdown(f"**Risk Category:** <span style='color:{color}; font-size:22px;'>{risk_category}</span>", unsafe_allow_html=True)
-
+    st.write('### Results')
+    st.write(f'Predicted 30-day mortality probability: {probability:.1%}')
+    st.markdown(f'Risk Category: <span style="color:{color}">{risk_category}</span>', unsafe_allow_html=True)
+    
     # Display risk interpretation
-    st.subheader("Risk Interpretation")
+    st.write('### Risk Interpretation')
     if risk_category == 'Low':
-        st.write("- Standard monitoring recommended")
-        st.write("- Review risk factors for potential modification")
+        st.write('- Standard monitoring recommended')
+        st.write('- Review risk factors for potential modification')
     elif risk_category == 'Medium':
-        st.write("- Enhanced monitoring recommended")
-        st.write("- Consider early intervention for modifiable risk factors")
-        st.write("- Regular reassessment of clinical status")
+        st.write('- Enhanced monitoring recommended')
+        st.write('- Consider early intervention for modifiable risk factors')
+        st.write('- Regular reassessment of clinical status')
     else:
-        st.write("- Close monitoring required")
-        st.write("- Immediate attention to modifiable risk factors")
-        st.write("- Consider intensive care management")
-        st.write("- Early goals of care discussion recommended")
+        st.write('- Close monitoring required')
+        st.write('- Immediate attention to modifiable risk factors')
+        st.write('- Consider intensive care management')
+        st.write('- Early goals of care discussion recommended')
 
-# Sidebar Information
-st.sidebar.subheader('Model Information')
-st.sidebar.write(f"Model Performance (AUC): **{model_package['metrics']['auc']:.3f}**")
-st.sidebar.write("**Risk Categories:**")
-st.sidebar.write("- Low: < 20% mortality risk")
-st.sidebar.write("- Medium: 20-40% mortality risk")
-st.sidebar.write("- High: > 40% mortality risk")
+st.sidebar.write('### Model Information')
+st.sidebar.write(f'Model Performance (AUC): {model_package["metrics"]["auc"]:.3f}')
+st.sidebar.write('Risk Categories:')
+st.sidebar.write('- Low: < 20% mortality risk')
+st.sidebar.write('- Medium: 20-40% mortality risk')
+st.sidebar.write('- High: > 40% mortality risk')
