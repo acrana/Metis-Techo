@@ -19,18 +19,24 @@ feature_names = model_package['feature_names']
 feature_ranges = model_package['feature_ranges']
 risk_thresholds = model_package.get('risk_thresholds', [0.2, 0.4])
 
-# Set realistic defaults for numerical features
+# **Set real ICU patient defaults (NO MORE NONSENSE VALUES)**
 realistic_defaults = {
     "age": 65,  # Average ICU patient age
-    "heart_rate": 85,  # Normal HR in ICU patients
-    "sbp": 120,  # Systolic blood pressure
-    "dbp": 70,  # Diastolic blood pressure
-    "mbp": 90,  # Mean arterial pressure
-    "resp_rate": 18,  # Respiratory rate
+    "heart_rate": 85,  # Normal HR in ICU
+    "sbp": 120,  # Normal systolic BP
+    "dbp": 70,  # Normal diastolic BP
+    "mbp": 90,  # Normal mean arterial pressure
+    "resp_rate": 18,  # Normal respiratory rate
     "temperature": 37.0,  # Normal body temperature
     "spo2": 97,  # Oxygen saturation
-    "apsiii_score": 50,  # APS-III Severity Score (0-100)
-    "sapsii_score": 40  # SAPS-II Score (0-163)
+    "apsiii_score": 50,  # APS-III (0-100 range)
+    "sapsii_score": 40,  # SAPS-II (0-163 range)
+    "inr": 1.1,  # Normal INR
+    "creatinine": 1.0,  # Normal creatinine
+    "wbc": 8.0,  # Normal white blood cell count
+    "hgb": 13.5,  # Normal hemoglobin
+    "platelets": 250,  # Normal platelet count
+    "bmi": 25.0,  # Normal BMI
 }
 
 # UI Title
@@ -45,7 +51,7 @@ Provide the required patient parameters to estimate mortality risk.
 col1, col2 = st.columns(2)
 input_data = {}
 
-# Create input fields using a form
+# **Create input fields with proper ICU values**
 with st.form("input_form"):
     for i, feature in enumerate(feature_names):
         with col1 if i % 2 == 0 else col2:  # Distribute inputs across two columns
@@ -53,8 +59,12 @@ with st.form("input_form"):
                 # Checkbox for binary conditions (Yes = 1, No = 0)
                 input_data[feature] = int(st.checkbox(f'{feature.replace("_", " ").title()}'))
             else:
+                # Use correct default values **only if they exist in realistic_defaults**
+                default_value = realistic_defaults.get(feature, None)
+                if default_value is None:
+                    default_value = feature_ranges[feature]['mean']
+
                 # Ensure default values are within valid feature ranges
-                default_value = realistic_defaults.get(feature, feature_ranges[feature]['mean'])
                 safe_default_value = min(max(default_value, feature_ranges[feature]['min']), feature_ranges[feature]['max'])
 
                 input_data[feature] = st.number_input(
