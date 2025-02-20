@@ -17,25 +17,28 @@ st.title('30-Day Mortality Prediction After Central Line Insertion')
 # Create sections for different types of inputs
 st.subheader('Patient Information')
 age = st.number_input(
-   'Age (years)', 
-   min_value=model_package['clinical_ranges']['age']['min'],
-   max_value=model_package['clinical_ranges']['age']['max'],
-   value=65.0
+    'Age (years)', 
+    min_value=float(model_package['clinical_ranges']['age']['min']),
+    max_value=float(model_package['clinical_ranges']['age']['max']),
+    value=65.0,
+    step=1.0
 )
 
 # Clinical Scores
 st.subheader('Clinical Scores')
 apsiii = st.number_input(
-   'APSIII Score', 
-   min_value=model_package['clinical_ranges']['apsiii_score']['min'],
-   max_value=model_package['clinical_ranges']['apsiii_score']['max'],
-   value=50
+    'APSIII Score', 
+    min_value=float(model_package['clinical_ranges']['apsiii_score']['min']),
+    max_value=float(model_package['clinical_ranges']['apsiii_score']['max']),
+    value=50.0,
+    step=1.0
 )
 sapsii = st.number_input(
-   'SAPSII Score',
-   min_value=model_package['clinical_ranges']['sapsii_score']['min'],
-   max_value=model_package['clinical_ranges']['sapsii_score']['max'],
-   value=40
+    'SAPSII Score',
+    min_value=float(model_package['clinical_ranges']['sapsii_score']['min']),
+    max_value=float(model_package['clinical_ranges']['sapsii_score']['max']),
+    value=40.0,
+    step=1.0
 )
 
 # Laboratory Values
