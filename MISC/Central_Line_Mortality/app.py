@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 
 # Load the trained model
-model = joblib.load("xgboost_mortality_final_swapped.pkl")
+model = joblib.load("xgboost_mortality.pkl")
 
 # Define the input fields for the top 15 features
 st.title("30-Day Mortality Prediction App")
