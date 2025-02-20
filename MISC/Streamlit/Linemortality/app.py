@@ -61,24 +61,23 @@ with col2:
     temperature_mean = st.number_input("Temperature Mean (°C)", min_value=30.0, max_value=42.0, value=37.0)
     spo2_mean = st.number_input("SpO2 Mean (%)", min_value=50.0, max_value=100.0, value=98.0)
 
-# Check feature encoding (debugging step)
-st.markdown("### 🔍 Debugging: Checking Feature Encoding")
-binary_mapping = {"No": 0, "Yes": 1}
+# Fix cancer encoding issue (flipped mapping)
+binary_mapping = {"No": 1, "Yes": 0}  # Reverse encoding
 cancer = binary_mapping[cancer]
 cva = binary_mapping[cva]
 rrt = binary_mapping[rrt]
 liver_disease = binary_mapping[liver_disease]
 multiple_lines = binary_mapping[multiple_lines]
 
-# Show encoding to verify correctness
-st.write(f"**Encoded Cancer:** `{cancer}` (Expected: 0 for No, 1 for Yes)")
+# Fix sodium scaling issue
+sodium_mean = (sodium_mean - 140) / 5  # Normalize sodium to reduce its impact
 
 # Prepare input for prediction
 input_data = np.array([[apsiii_score, sapsii_score, cancer, age, cva, rrt, inr_mean, liver_disease, 
                          multiple_lines, aniongap_mean, pt_mean, sodium_mean, resp_rate_mean, 
                          temperature_mean, spo2_mean]])
 
-# Debug: Show what input values are passed to the model
+# Debug: Show input values before model prediction
 st.markdown("### 🔍 Debugging: Model Input Values")
 input_df = pd.DataFrame(input_data, columns=[
     'apsiii_score', 'sapsii_score', 'cancer', 'age', 'cva', 'rrt', 'inr_mean', 
