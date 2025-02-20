@@ -2,9 +2,15 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import joblib
+import os
+
+# Get the absolute path to the directory containing app.py
+dirname = os.path.dirname(__file__)
+# Construct the full path to the model file
+model_path = os.path.join(dirname, 'mortality_prediction_model.joblib')
 
 # Load the saved model package
-model_package = joblib.load('mortality_prediction_model.joblib')
+model_package = joblib.load(model_path)
 
 st.title('30-Day Mortality Prediction After Central Line Insertion')
 
