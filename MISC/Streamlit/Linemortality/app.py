@@ -5,7 +5,7 @@ import numpy as np
 import urllib.request
 import pandas as pd
 
-# Page title and intro
+# Page title and disclaimer
 st.set_page_config(page_title="30-Day Mortality Upon Central Line Insertion", layout="centered")
 st.title("30-Day Mortality Upon Central Line Insertion")
 st.markdown("**Note:** This tool is for **self-learning purposes only** and is not intended for clinical decision-making.")
@@ -61,7 +61,8 @@ with col2:
     temperature_mean = st.number_input("Temperature Mean (°C)", min_value=30.0, max_value=42.0, value=37.0)
     spo2_mean = st.number_input("SpO2 Mean (%)", min_value=50.0, max_value=100.0, value=98.0)
 
-# Convert categorical inputs to binary (0/1)
+# Check feature encoding (debugging step)
+st.markdown("### 🔍 Debugging: Checking Feature Encoding")
 binary_mapping = {"No": 0, "Yes": 1}
 cancer = binary_mapping[cancer]
 cva = binary_mapping[cva]
@@ -69,10 +70,22 @@ rrt = binary_mapping[rrt]
 liver_disease = binary_mapping[liver_disease]
 multiple_lines = binary_mapping[multiple_lines]
 
+# Show encoding to verify correctness
+st.write(f"**Encoded Cancer:** `{cancer}` (Expected: 0 for No, 1 for Yes)")
+
 # Prepare input for prediction
 input_data = np.array([[apsiii_score, sapsii_score, cancer, age, cva, rrt, inr_mean, liver_disease, 
                          multiple_lines, aniongap_mean, pt_mean, sodium_mean, resp_rate_mean, 
                          temperature_mean, spo2_mean]])
+
+# Debug: Show what input values are passed to the model
+st.markdown("### 🔍 Debugging: Model Input Values")
+input_df = pd.DataFrame(input_data, columns=[
+    'apsiii_score', 'sapsii_score', 'cancer', 'age', 'cva', 'rrt', 'inr_mean', 
+    'liver_disease', 'multiple_lines', 'aniongap_mean', 'pt_mean', 'sodium_mean', 
+    'resp_rate_mean', 'temperature_mean', 'spo2_mean'
+])
+st.dataframe(input_df)
 
 st.markdown("---")
 
@@ -107,5 +120,11 @@ if st.button("Predict 30-Day Mortality Risk", use_container_width=True):
     st.markdown("### Key Factors in Prediction")
     top_factors_df = pd.DataFrame(top_factors, columns=["Feature", "Impact Score"])
     st.dataframe(top_factors_df.style.format({"Impact Score": "{:.3f}"}))
+
+    # Debugging: Show feature importance weights
+    st.markdown("### 🔍 Feature Importance Analysis")
+    importance_df = pd.DataFrame({"Feature": feature_names, "Importance": feature_importances})
+    importance_df = importance_df.sort_values(by="Importance", ascending=False)
+    st.dataframe(importance_df)
 
 
