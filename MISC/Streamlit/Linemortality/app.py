@@ -3,16 +3,18 @@ import joblib
 import os
 import numpy as np
 import urllib.request
+import pandas as pd
 
 # Page title and intro
-st.set_page_config(page_title="30-Day Mortality Prediction", layout="centered")
-st.title("30-Day Mortality Prediction Model")
+st.set_page_config(page_title="30-Day Mortality Upon Central Line Insertion", layout="centered")
+st.title("30-Day Mortality Upon Central Line Insertion")
 st.markdown("**Note:** This tool is for **self-learning purposes only** and is not intended for clinical decision-making.")
 
-# Model loading
+# Model file settings
 MODEL_FILENAME = "xgboost_mortality.pkl"
 MODEL_URL = "https://raw.githubusercontent.com/acrana/Metis-Techo/main/MISC/Streamlit/Linemortality/xgboost_mortality.pkl"
 
+# Download the model if missing
 if not os.path.exists(MODEL_FILENAME):
     try:
         urllib.request.urlretrieve(MODEL_URL, MODEL_FILENAME)
@@ -20,14 +22,19 @@ if not os.path.exists(MODEL_FILENAME):
         st.error(f"Model download failed: {e}")
         st.stop()
 
+# Load the model
 try:
     model = joblib.load(MODEL_FILENAME)
 except Exception as e:
     st.error(f"Error loading model: {e}")
     st.stop()
 
-# Organizing inputs
-st.subheader("Patient Information")
+# Define feature categories
+binary_features = ['cancer', 'cva', 'rrt', 'liver_disease', 'multiple_lines']
+numeric_features = ['apsiii_score', 'sapsii_score', 'age', 'inr_mean', 'aniongap_mean', 
+                    'pt_mean', 'sodium_mean', 'resp_rate_mean', 'temperature_mean', 'spo2_mean']
+
+st.subheader("Enter Patient Information")
 
 col1, col2 = st.columns(2)
 
@@ -55,21 +62,37 @@ with col2:
     spo2_mean = st.number_input("SpO2 Mean (%)", min_value=50.0, max_value=100.0, value=98.0)
 
 # Convert categorical inputs to binary (0/1)
-binary_features = {"No": 0, "Yes": 1}
-cancer = binary_features[cancer]
-cva = binary_features[cva]
-rrt = binary_features[rrt]
-liver_disease = binary_features[liver_disease]
-multiple_lines = binary_features[multiple_lines]
+binary_mapping = {"No": 0, "Yes": 1}
+cancer = binary_mapping[cancer]
+cva = binary_mapping[cva]
+rrt = binary_mapping[rrt]
+liver_disease = binary_mapping[liver_disease]
+multiple_lines = binary_mapping[multiple_lines]
 
-# Prediction
+# Prepare input for prediction
 input_data = np.array([[apsiii_score, sapsii_score, cancer, age, cva, rrt, inr_mean, liver_disease, 
                          multiple_lines, aniongap_mean, pt_mean, sodium_mean, resp_rate_mean, 
                          temperature_mean, spo2_mean]])
 
 st.markdown("---")
-if st.button("🔮 Predict Mortality Risk", use_container_width=True):
+
+# Predict and show feature importance
+if st.button("Predict 30-Day Mortality Risk", use_container_width=True):
     prediction_prob = model.predict_proba(input_data)[0][1]
+    
+    # Get feature importances
+    feature_importances = model.feature_importances_
+    feature_names = ['apsiii_score', 'sapsii_score', 'cancer', 'age', 'cva', 'rrt', 'inr_mean', 
+                     'liver_disease', 'multiple_lines', 'aniongap_mean', 'pt_mean', 'sodium_mean', 
+                     'resp_rate_mean', 'temperature_mean', 'spo2_mean']
+    
+    # Multiply importances by input values to see what contributes most
+    impact_scores = np.abs(feature_importances * input_data.flatten())
+    
+    # Sort features by impact
+    sorted_indices = np.argsort(impact_scores)[::-1]
+    top_factors = [(feature_names[i], impact_scores[i]) for i in sorted_indices[:5]]
+
     st.subheader("Prediction Result")
     st.write(f"Predicted **30-day mortality risk**: `{prediction_prob:.2%}`")
 
@@ -79,4 +102,10 @@ if st.button("🔮 Predict Mortality Risk", use_container_width=True):
         st.warning("Medium Risk")
     else:
         st.error("High Risk")
+
+    # Show biggest contributing factors
+    st.markdown("### Key Factors in Prediction")
+    top_factors_df = pd.DataFrame(top_factors, columns=["Feature", "Impact Score"])
+    st.dataframe(top_factors_df.style.format({"Impact Score": "{:.3f}"}))
+
 
