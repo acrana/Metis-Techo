@@ -1,14 +1,30 @@
-iimport streamlit as st
+import streamlit as st
 import joblib
 import pandas as pd
 import matplotlib.pyplot as plt
 
 # Load the model package from the same directory
-model_package = joblib.load('mortality_prediction_model.joblib')
-model = model_package['model']
-feature_names = model_package['feature_names']
-clinical_ranges = model_package['clinical_ranges']
-metrics = model_package['metrics']
+try:
+    model_package = joblib.load('mortality_prediction_model.joblib')
+    model = model_package['model']
+    feature_names = model_package['feature_names']
+    clinical_ranges = model_package['clinical_ranges']
+    metrics = model_package['metrics']
+except FileNotFoundError:
+    st.error("Model file 'mortality_prediction_model.joblib' not found in the directory.")
+    st.stop()
+
+# Validation function for the 15 features
+def validate_inputs(inputs):
+    """Validate input values against clinical ranges."""
+    for feature, value in inputs.items():
+        if feature in clinical_ranges:
+            min_val = clinical_ranges[feature]['min']
+            max_val = clinical_ranges[feature]['max']
+            if not (min_val <= value <= max_val):
+                st.error(f"{feature.replace('_mean', '').upper()} must be between {min_val} and {max_val}.")
+                return False
+    return True
 
 # Streamlit app configuration
 st.set_page_config(page_title="Mortality Prediction", layout="wide")
@@ -16,11 +32,11 @@ st.set_page_config(page_title="Mortality Prediction", layout="wide")
 # Title and description
 st.title("30-Day Mortality Prediction After Central Line Insertion")
 st.markdown("""
-    This tool predicts the probability of 30-day mortality following central line insertion based on patient data.
-    Enter the values below and click **Predict** to see the result.
+    This tool predicts the probability of 30-day mortality following central line insertion.
+    Enter patient data below and click **Predict** to see the result.
 """)
 
-# Sidebar for model info
+# Sidebar with model info
 st.sidebar.header("Model Information")
 st.sidebar.write("**Top 15 Features Used:**")
 for i, feature in enumerate(feature_names, 1):
@@ -28,7 +44,7 @@ for i, feature in enumerate(feature_names, 1):
 st.sidebar.write(f"**Test AUC:** {metrics['auc']:.3f}")
 st.sidebar.write(f"**Test Brier Score:** {metrics['brier']:.3f}")
 
-# Organize inputs into two columns
+# Two-column layout
 col1, col2 = st.columns(2)
 
 # Input dictionary
@@ -67,25 +83,26 @@ with col2:
 
 # Prediction button and result
 if st.button("Predict Mortality Risk", key="predict_btn"):
-    # Create DataFrame from inputs
-    input_df = pd.DataFrame([input_data], columns=feature_names)
-    prob = model.predict_proba(input_df)[0, 1]
-    
-    # Display result with color-coded risk
-    st.subheader("Prediction Result")
-    if prob < 0.2:
-        st.success(f"Predicted 30-day mortality probability: **{prob:.3f}** (Low Risk)")
-    elif prob < 0.4:
-        st.warning(f"Predicted 30-day mortality probability: **{prob:.3f}** (Medium Risk)")
-    else:
-        st.error(f"Predicted 30-day mortality probability: **{prob:.3f}** (High Risk)")
+    if validate_inputs(input_data):
+        # Create DataFrame from inputs
+        input_df = pd.DataFrame([input_data], columns=feature_names)
+        prob = model.predict_proba(input_df)[0, 1]
+        
+        # Display result with color-coded risk
+        st.subheader("Prediction Result")
+        if prob < 0.2:
+            st.success(f"Predicted 30-day mortality probability: **{prob:.3f}** (Low Risk)")
+        elif prob < 0.4:
+            st.warning(f"Predicted 30-day mortality probability: **{prob:.3f}** (Medium Risk)")
+        else:
+            st.error(f"Predicted 30-day mortality probability: **{prob:.3f}** (High Risk)")
 
-    # Feature importance plot
-    st.subheader("Feature Importance")
-    fig, ax = plt.subplots()
-    xgb.plot_importance(model, max_num_features=10, ax=ax)
-    plt.title("Top 10 Feature Importance")
-    st.pyplot(fig)
+        # Feature importance plot
+        st.subheader("Feature Importance")
+        fig, ax = plt.subplots()
+        xgb.plot_importance(model, max_num_features=10, ax=ax)
+        plt.title("Top 10 Feature Importance")
+        st.pyplot(fig)
 
 # Footer
 st.markdown("---")
