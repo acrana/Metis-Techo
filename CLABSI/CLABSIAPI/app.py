@@ -1,138 +1,92 @@
-import streamlit as st
+iimport streamlit as st
 import joblib
 import pandas as pd
-import os
-import time
+import matplotlib.pyplot as plt
 
-# We use SHAP for local explanation (no bar charts required)
-import shap
+# Load the model package from the same directory
+model_package = joblib.load('mortality_prediction_model.joblib')
+model = model_package['model']
+feature_names = model_package['feature_names']
+clinical_ranges = model_package['clinical_ranges']
+metrics = model_package['metrics']
 
-# --------------------------------------------------------------------------------
-# 1. File Paths for Model
-# --------------------------------------------------------------------------------
-base_path = os.path.dirname(os.path.abspath(__file__))
-model_path = os.path.join(base_path, "final_xgb_model.pkl")
+# Streamlit app configuration
+st.set_page_config(page_title="Mortality Prediction", layout="wide")
 
-# Load the XGBoost model
-model = joblib.load(model_path)
-model_feature_names = model.get_booster().feature_names  # columns the model expects
+# Title and description
+st.title("30-Day Mortality Prediction After Central Line Insertion")
+st.markdown("""
+    This tool predicts the probability of 30-day mortality following central line insertion based on patient data.
+    Enter the values below and click **Predict** to see the result.
+""")
 
-# Create a SHAP explainer. If you want an exact TreeExplainer, do:
-# explainer = shap.TreeExplainer(model)
-# but Explainer auto-detects the best one for XGBoost.
-explainer = shap.Explainer(model)
+# Sidebar for model info
+st.sidebar.header("Model Information")
+st.sidebar.write("**Top 15 Features Used:**")
+for i, feature in enumerate(feature_names, 1):
+    st.sidebar.write(f"{i}. {feature.replace('_mean', '')}")
+st.sidebar.write(f"**Test AUC:** {metrics['auc']:.3f}")
+st.sidebar.write(f"**Test Brier Score:** {metrics['brier']:.3f}")
 
-# --------------------------------------------------------------------------------
-# 2. App Title & Disclaimer
-# --------------------------------------------------------------------------------
-st.title("Line Risk Prediction")
-st.markdown(
-    "**Please note: This app is a personal project and is not intended for "
-    "serious medical use. It is designed for educational and demonstration "
-    "purposes only.**"
-)
-
-# --------------------------------------------------------------------------------
-# 3. UI Layout
-# --------------------------------------------------------------------------------
+# Organize inputs into two columns
 col1, col2 = st.columns(2)
 
+# Input dictionary
+input_data = {}
+
+# Helper function to clean feature names
+def clean_name(feature):
+    return feature.replace('_mean', '').replace('_score', '').upper()
+
+# Column 1: Demographics, Vitals, Binary Features
 with col1:
-    line_age = st.number_input("Line Age", min_value=0, max_value=120, value=50)
-    gender = st.selectbox("Gender", [0, 1], format_func=lambda x: "Female" if x == 0 else "Male")
-    has_diabetes = st.checkbox("Has Diabetes")
-    has_cancer = st.checkbox("Has Cancer")
-    has_liver = st.checkbox("Has Liver Disease")
-    has_chf = st.checkbox("Has CHF")
-    has_cva = st.checkbox("Has CVA")
+    st.subheader("Demographics & Vitals")
+    input_data['age'] = st.number_input("Age (years)", min_value=18, max_value=130, value=65, step=1)
+    input_data['mbp_mean'] = st.number_input("Mean Blood Pressure (mmHg)", min_value=40.0, max_value=140.0, value=75.0, step=0.1)
+    input_data['resp_rate_mean'] = st.number_input("Respiratory Rate (breaths/min)", min_value=5, max_value=50, value=20, step=1)
+    input_data['temperature_mean'] = st.number_input("Temperature (°C)", min_value=32.0, max_value=42.0, value=37.0, step=0.1)
+    
+    st.subheader("Conditions")
+    input_data['cancer'] = 1 if st.checkbox("Cancer Present", value=True) else 0
+    input_data['multiple_lines'] = 1 if st.checkbox("Multiple Lines Inserted", value=False) else 0
 
-    # User sees 0 = worst adherence, 1 = best adherence
-    user_chg_adherence = st.slider(
-        "CHG Adherence Ratio (0 = No Adherence, 1 = Perfect Adherence)",
-        0.0, 1.0, 0.5
-    )
-    # If your model effectively learned it backwards, invert for the model:
-    model_chg_adherence = 1.0 - user_chg_adherence
-
+# Column 2: Labs and Scores
 with col2:
-    wbc_mean = st.number_input("WBC Mean", min_value=0.0, value=8.0)
-    plt_mean = st.number_input("Platelet Mean", min_value=0.0, value=200.0)
-    creat_mean = st.number_input("Creatinine Mean", min_value=0.0, value=1.0)
-    inr_mean = st.number_input("INR Mean", min_value=0.0, value=1.0)
-    pt_mean = st.number_input("PT Mean", min_value=0.0, value=12.0)
-    sofa_score = st.number_input("SOFA Score", min_value=0, value=2)
-    apsiii = st.number_input("APSIII Score", min_value=0, value=50)
-    sapsii = st.number_input("SAPSII Score", min_value=0, value=30)
+    st.subheader("Laboratory Values")
+    input_data['wbc_mean'] = st.number_input("WBC (x10^9/L)", min_value=0.0, max_value=50.0, value=13.0, step=0.1)
+    input_data['aniongap_mean'] = st.number_input("Anion Gap (mEq/L)", min_value=0.0, max_value=40.0, value=14.0, step=0.1)
+    input_data['bicarbonate_mean'] = st.number_input("Bicarbonate (mEq/L)", min_value=10.0, max_value=50.0, value=22.0, step=0.1)
+    input_data['creatinine_mean'] = st.number_input("Creatinine (mg/dL)", min_value=0.0, max_value=20.0, value=1.5, step=0.1)
+    input_data['chloride_mean'] = st.number_input("Chloride (mEq/L)", min_value=70.0, max_value=140.0, value=104.0, step=0.1)
+    input_data['sodium_mean'] = st.number_input("Sodium (mEq/L)", min_value=110.0, max_value=160.0, value=138.0, step=0.1)
+    
+    st.subheader("Clinical Scores")
+    input_data['sofa_score'] = st.slider("SOFA Score", min_value=0, max_value=24, value=7, step=1)
+    input_data['apsiii_score'] = st.slider("APS III Score", min_value=0, max_value=200, value=50, step=1)
+    input_data['sapsii_score'] = st.slider("SAPS II Score", min_value=0, max_value=150, value=40, step=1)
 
-# --------------------------------------------------------------------------------
-# 4. Prediction Logic (With a Spinner & Local Explanation)
-# --------------------------------------------------------------------------------
-if st.button("Predict"):
-    with st.spinner("Calculating your risk..."):
-        # Prepare the input dictionary
-        input_data = {
-            "admission_age": line_age,
-            "gender": int(gender),
-            "has_diabetes": int(has_diabetes),
-            "has_cancer": int(has_cancer),
-            "has_liver": int(has_liver),
-            "has_chf": int(has_chf),
-            "has_cva": int(has_cva),
-            # Hidden from UI, required by the model, set to default 0
-            "days_since_last_dressing_change": 0,
-            # Pass the inverted slider value if the model was trained inversely
-            "chg_adherence_ratio": model_chg_adherence,
-            "wbc_mean": wbc_mean,
-            "plt_mean": plt_mean,
-            "creat_mean": creat_mean,
-            "inr_mean": inr_mean,
-            "pt_mean": pt_mean,
-            "sofa_score": sofa_score,
-            "apsiii": apsiii,
-            "sapsii": sapsii
-        }
+# Prediction button and result
+if st.button("Predict Mortality Risk", key="predict_btn"):
+    # Create DataFrame from inputs
+    input_df = pd.DataFrame([input_data], columns=feature_names)
+    prob = model.predict_proba(input_df)[0, 1]
+    
+    # Display result with color-coded risk
+    st.subheader("Prediction Result")
+    if prob < 0.2:
+        st.success(f"Predicted 30-day mortality probability: **{prob:.3f}** (Low Risk)")
+    elif prob < 0.4:
+        st.warning(f"Predicted 30-day mortality probability: **{prob:.3f}** (Medium Risk)")
+    else:
+        st.error(f"Predicted 30-day mortality probability: **{prob:.3f}** (High Risk)")
 
-        # Build DataFrame for prediction
-        df = pd.DataFrame([input_data])
-        df_transformed = df.reindex(columns=model_feature_names, fill_value=0)
+    # Feature importance plot
+    st.subheader("Feature Importance")
+    fig, ax = plt.subplots()
+    xgb.plot_importance(model, max_num_features=10, ax=ax)
+    plt.title("Top 10 Feature Importance")
+    st.pyplot(fig)
 
-        # Model prediction
-        prediction = model.predict(df_transformed)
-        probability = model.predict_proba(df_transformed)[:, 1]
-        risk_level = "High Risk" if prediction[0] == 1 else "Low Risk"
-
-        # Explain with SHAP (local explanation for this single row)
-        shap_values = explainer(df_transformed)  # SHAP returns array-like for each row
-        # shap_values[i].values is the array of shap contributions for row i
-        # We'll pick the first row's contributions:
-        shap_contribs = shap_values[0].values
-        # Pair each feature with its shap contribution
-        factors = list(zip(df_transformed.columns, shap_contribs))
-        # Sort by absolute contribution (largest magnitude first)
-        factors_sorted = sorted(factors, key=lambda x: abs(x[1]), reverse=True)
-
-        time.sleep(0.5)  # small pause for demonstration
-    st.success("Done!")
-
-    # Show the main result
-    st.subheader(f"Prediction: {risk_level}")
-    st.subheader(f"Probability: {probability[0]:.2%}")
-
-    # --------------------------------------------------------------------------------
-    # 5. Textual Explanation of Feature Contributions (No Bar Graphs)
-    # --------------------------------------------------------------------------------
-    st.markdown("### Influential Factors for This Prediction")
-    st.markdown(
-        "_Listed from **most** to **least** influential (by absolute contribution). "
-        "A **positive** SHAP value means it **increases** predicted risk; a negative "
-        "value means it **decreases** risk._"
-    )
-    for feature_name, shap_val in factors_sorted:
-        # sign indicates whether it increases or decreases risk
-        direction = "increases" if shap_val > 0 else "decreases"
-        st.write(
-            f"**{feature_name}**: {direction} risk "
-            f"(contribution={shap_val:.3f})"
-        )
-
-
+# Footer
+st.markdown("---")
+st.write("Developed using MIMIC-IV data. Model trained on 17,191 ICU stays with central lines.")
