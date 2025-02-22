@@ -3,6 +3,7 @@ import joblib
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
+import xgboost as xgb  # Added this import
 
 # Load the model from the same directory
 model_path = os.path.join(os.path.dirname(__file__), 'mortality_prediction_model.joblib')
