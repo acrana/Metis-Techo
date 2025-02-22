@@ -134,5 +134,3 @@ if st.button("Predict"):
             f"**{feature_name}**: {direction} risk "
             f"(contribution={shap_val:.3f})"
         )
-
-
