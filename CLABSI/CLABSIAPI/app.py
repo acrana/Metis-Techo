@@ -34,6 +34,7 @@ st.title("30-Day Mortality Prediction After Central Line Insertion")
 st.markdown("""
     This tool predicts the probability of 30-day mortality following central line insertion.
     Enter patient data below and click **Predict** to see the result.
+    Uses 15 features from MIMIC-IV data.
 """)
 
 # Sidebar with model info
@@ -57,29 +58,29 @@ def clean_name(feature):
 # Column 1: Demographics, Vitals, Binary Features
 with col1:
     st.subheader("Demographics & Vitals")
-    input_data['age'] = st.number_input("Age (years)", min_value=18, max_value=130, value=65, step=1)
+    input_data['age'] = st.number_input("Age (years)", min_value=18, max_value=130, value=74, step=1)
     input_data['mbp_mean'] = st.number_input("Mean Blood Pressure (mmHg)", min_value=40.0, max_value=140.0, value=75.0, step=0.1)
-    input_data['resp_rate_mean'] = st.number_input("Respiratory Rate (breaths/min)", min_value=5, max_value=50, value=20, step=1)
+    input_data['resp_rate_mean'] = st.number_input("Respiratory Rate (breaths/min)", min_value=5, max_value=50, value=16, step=1)
     input_data['temperature_mean'] = st.number_input("Temperature (°C)", min_value=32.0, max_value=42.0, value=37.0, step=0.1)
     
     st.subheader("Conditions")
-    input_data['cancer'] = 1 if st.checkbox("Cancer Present", value=True) else 0
+    input_data['cancer'] = 1 if st.checkbox("Cancer Present", value=False) else 0
     input_data['multiple_lines'] = 1 if st.checkbox("Multiple Lines Inserted", value=False) else 0
 
 # Column 2: Labs and Scores
 with col2:
     st.subheader("Laboratory Values")
-    input_data['wbc_mean'] = st.number_input("WBC (x10^9/L)", min_value=0.0, max_value=50.0, value=13.0, step=0.1)
+    input_data['wbc_mean'] = st.number_input("WBC (x10^9/L)", min_value=0.0, max_value=50.0, value=10.0, step=0.1)
     input_data['aniongap_mean'] = st.number_input("Anion Gap (mEq/L)", min_value=0.0, max_value=40.0, value=14.0, step=0.1)
-    input_data['bicarbonate_mean'] = st.number_input("Bicarbonate (mEq/L)", min_value=10.0, max_value=50.0, value=22.0, step=0.1)
-    input_data['creatinine_mean'] = st.number_input("Creatinine (mg/dL)", min_value=0.0, max_value=20.0, value=1.5, step=0.1)
-    input_data['chloride_mean'] = st.number_input("Chloride (mEq/L)", min_value=70.0, max_value=140.0, value=104.0, step=0.1)
-    input_data['sodium_mean'] = st.number_input("Sodium (mEq/L)", min_value=110.0, max_value=160.0, value=138.0, step=0.1)
+    input_data['bicarbonate_mean'] = st.number_input("Bicarbonate (mEq/L)", min_value=10.0, max_value=50.0, value=24.5, step=0.1)
+    input_data['creatinine_mean'] = st.number_input("Creatinine (mg/dL)", min_value=0.0, max_value=20.0, value=1.0, step=0.1)
+    input_data['chloride_mean'] = st.number_input("Chloride (mEq/L)", min_value=70.0, max_value=140.0, value=105.0, step=0.1)
+    input_data['sodium_mean'] = st.number_input("Sodium (mEq/L)", min_value=110.0, max_value=160.0, value=140.0, step=0.1)
     
     st.subheader("Clinical Scores")
-    input_data['sofa_score'] = st.slider("SOFA Score", min_value=0, max_value=24, value=7, step=1)
-    input_data['apsiii_score'] = st.slider("APS III Score", min_value=0, max_value=200, value=50, step=1)
-    input_data['sapsii_score'] = st.slider("SAPS II Score", min_value=0, max_value=150, value=40, step=1)
+    input_data['sofa_score'] = st.slider("SOFA Score", min_value=0, max_value=24, value=5, step=1)
+    input_data['apsiii_score'] = st.slider("APS III Score", min_value=0, max_value=200, value=149, step=1)
+    input_data['sapsii_score'] = st.slider("SAPS II Score", min_value=0, max_value=150, value=81, step=1)
 
 # Prediction button and result
 if st.button("Predict Mortality Risk", key="predict_btn"):
