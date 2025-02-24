@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Neurocritical Care CO₂ Simulator</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background-color: #f8f9fa; font-family: Arial, sans-serif; }
+    #canvasContainer { background: #ffffff; border: 1px solid #dee2e6; border-radius: 4px; padding: 10px; text-align: center; }
+    pre { font-family: Consolas, monospace; font-size: 0.9rem; }
+    .alert-box { color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; padding: 5px; border-radius: 4px; font-size: 0.9rem; }
+    #complianceContainer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+    }
+    #complianceImage {
+      width: 300px;
+      height: 200px;
+      margin: 0;
+      background-image: url("https://emergencymedicineireland.com/wp-content/uploads/2020/11/ICP.png");
+      background-size: 100% 200%;
+      background-repeat: no-repeat;
+    }
+    #waveformDescription {
+      width: 300px;
+      padding: 10px;
+      font-size: 0.9rem;
+      color: #333;
+    }
+    #complianceCaption { text-align: center; margin-top: 0.5rem; font-weight: bold; }
+    .small-text { font-size: 0.85rem; color: #555; }
+    .control-section { margin-bottom: 15px; }
+    .btn-sm { margin: 2px; }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container">
+      <a class="navbar-brand" href="#">Neurocritical Care CO₂ Simulator</a>
+    </div>
+  </nav>
+  
+  <div class="container my-4">
+    <div class="row g-4">
+      <div class="col-lg-4">
+        <div class="card mb-3">
+          <div class="card-header">Controls</div>
+          <div class="card-body">
+            <div class="control-section">
+              <label for="co2Slider" class="form-label">Arterial CO₂ (mm Hg): <span id="co2Display">35</span></label>
+              <input type="range" class="form-range" id="co2Slider" min="20" max="80" value="35" step="1">
+            </div>
+            <div class="control-section">
+              <label for="mapSlider" class="form-label">MAP (mm Hg): <span id="mapDisplay">80</span></label>
+              <input type="range" class="form-range" id="mapSlider" min="60" max="140" value="80" step="1">
+            </div>
+            <div class="control-section">
+              <label for="icpState" class="form-label">Baseline ICP</label>
+              <select id="icpState" class="form-select">
+                <option value="normal">Normal (10–15 mmHg)</option>
+                <option value="elevated">Elevated (20–25 mmHg)</option>
+                <option value="high">High (30–35 mmHg)</option>
+                <option value="critical">Critical (40–50 mmHg)</option>
+              </select>
+            </div>
+            <div class="control-section">
+              <label for="swellingSeverity" class="form-label">Swelling Severity</label>
+              <select id="swellingSeverity" class="form-select">
+                <option value="none">None</option>
+                <option value="mild">Mild</option>
+                <option value="moderate">Moderate</option>
+                <option value="severe">Severe</option>
+              </select>
+            </div>
+            <div class="control-section">
+              <button id="hyperButton" class="btn btn-warning btn-sm">Hyperventilate (10s)</button>
+              <button id="evdButton" class="btn btn-primary btn-sm">Toggle EVD</button>
+              <div class="form-check mt-2">
+                <input class="form-check-input" type="checkbox" id="prolongedCheckbox">
+                <label class="form-check-label" for="prolongedCheckbox">Prolonged Hyperventilation</label>
+              </div>
+            </div>
+            <div class="control-section">
+              <button id="pauseButton" class="btn btn-secondary btn-sm">Pause</button>
+              <button id="resetButton" class="btn btn-danger btn-sm">Reset</button>
+              <button id="downloadButton" class="btn btn-success btn-sm">Download Data</button>
+              <button id="scenarioButton" class="btn btn-info btn-sm">Load TBI Scenario</button>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card mb-3">
+          <div class="card-header">Status & Alerts</div>
+          <div class="card-body">
+            <p id="infoMessage">CO₂ at normal levels. Brain blood flow and pressure are balanced.</p>
+            <pre id="alertMessage" class="alert-box" style="display: none;"></pre>
+          </div>
+        </div>
+        
+        <div class="card">
+          <div class="card-header">
+            <button class="btn btn-link p-0" type="button" data-bs-toggle="collapse" data-bs-target="#helpCollapse" aria-expanded="false">
+              Help & Interventions (Click to Expand)
+            </button>
+          </div>
+          <div id="helpCollapse" class="collapse">
+            <div class="card-body">
+              <p class="small-text"><strong>ICP:</strong> Intracranial pressure (mmHg). Goal: Keep < 20.</p>
+              <p class="small-text"><strong>CPP:</strong> Cerebral perfusion pressure (MAP - ICP). Goal: 50–70 mmHg.</p>
+              <p class="small-text"><strong>CBF:</strong> Cerebral blood flow (% of normal). Low CBF = less oxygen to brain.</p>
+              <p class="small-text"><strong>CO₂:</strong> Controls vessel size—low CO₂ shrinks them (↓ ICP, ↓ CBF), high CO₂ widens them (↑ ICP, ↑ CBF).</p>
+              <p class="small-text"><strong>EVD:</strong> Drains fluid, lowers ICP ~10 mmHg. Used when ICP is high.</p>
+              <p class="small-text"><strong>Hyperventilation:</strong> Drops CO₂ fast. Short-term lowers ICP; prolonged risks low oxygen.</p>
+              <p class="small-text"><strong>ICP Waveforms:</strong> Three components show brain compliance:</p>
+              <ul class="small-text">
+                <li><strong>P1 (Percussion 🥁):</strong> Arterial pulsations at systole’s start—tallest, sharpest peak in normal compliance.</li>
+                <li><strong>P2 (Tidal 🌊):</strong> Ventricle compliance response. Normally ~80% of P1 height; if P2 > P1, compliance is poor, signaling high ICP.</li>
+                <li><strong>P3 (Dicrotic 📉):</strong> Aortic valve closure at systole’s end—smallest dip.</li>
+              </ul>
+              <p class="small-text">Normal: P1 > P2 > P3 (descending). High ICP: P2 > P1 or P1/P2 fuse, indicating compromised/critical compliance. Early abnormal waveforms warn of ICP crisis. Dampened waves may signal catheter issues, vasospasm, or open skull.</p>
+              <p class="small-text"><em>Tip:</em> Balance pressure control with brain oxygen needs.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-lg-8">
+        <div class="card mb-3">
+          <div class="card-header">Readouts</div>
+          <div class="card-body">
+            <pre id="numericalReadouts">Initializing simulation...</pre>
+          </div>
+        </div>
+        
+        <div class="card mb-3">
+          <div class="card-header">ICP Waveform Compliance</div>
+          <div class="card-body" id="complianceContainer">
+            <div id="complianceImage"></div>
+            <div id="waveformDescription">
+              <strong>ICP Waveforms:</strong><br>
+              - <strong>P1 (Percussion 🥁):</strong> Arterial pulsations at systole’s start—tallest, sharpest peak in normal compliance.<br>
+              - <strong>P2 (Tidal 🌊):</strong> Ventricle compliance response. Normally ~80% of P1 height; if P2 > P1, compliance is poor, signaling high ICP.<br>
+              - <strong>P3 (Dicrotic 📉):</strong> Aortic valve closure at systole’s end—smallest dip.<br>
+              Normal: P1 > P2 > P3 (descending). High ICP: P2 > P1 or P1/P2 fuse, indicating compromised or critical compliance. Early abnormal waveforms warn of ICP crisis. Dampened waves may signal catheter issues, vasospasm, or open skull.
+            </div>
+            <div id="complianceCaption">Good compliance (Top Half)</div>
+          </div>
+        </div>
+        
+        <div class="card">
+          <div class="card-header">Graphs (ICP, CPP, CBF)</div>
+          <div class="card-body" id="canvasContainer"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/p5@1.5.0/lib/p5.min.js"></script>
+  <script>
+    let co2Slider, mapSlider, co2Display, mapDisplay, icpState, swellingSeverity;
+    let hyperButton, evdButton, prolongedCheckbox, pauseButton, downloadButton, resetButton, scenarioButton;
+    
+    const baseDiameter = 100;
+    const baselineICPNormal = 12;
+    let baselineICP = baselineICPNormal;
+    let alphaICP = 50;
+    const tauVessel = 1.0;
+    const tauICP = 2.0;
+    const complianceThreshold = 20;
+    
+    let hyperActive = false;
+    let hyperStartTime = 0;
+    const hyperDuration = 10000;
+    let hyperRebound = false;
+    let reboundStartTime = 0;
+    const reboundDuration = 20000;
+    let evdActive = false;
+    
+    let actualDiameter = baseDiameter;
+    let actualICP = baselineICP;
+    let dataLog = [];
+    const timeWindow = 60;
+    let simStartTime = 0;
+    let paused = false;
+    
+    const graphWidth = 700;
+    const graphHeight = 400;
+    
+    function setup() {
+      let graphCanvas = createCanvas(graphWidth, graphHeight);
+      graphCanvas.parent('canvasContainer');
+      
+      co2Slider = select('#co2Slider');
+      mapSlider = select('#mapSlider');
+      co2Display = select('#co2Display');
+      mapDisplay = select('#mapDisplay');
+      icpState = select('#icpState');
+      swellingSeverity = select('#swellingSeverity');
+      hyperButton = select('#hyperButton');
+      evdButton = select('#evdButton');
+      prolongedCheckbox = select('#prolongedCheckbox');
+      pauseButton = select('#pauseButton');
+      downloadButton = select('#downloadButton');
+      resetButton = select('#resetButton');
+      scenarioButton = select('#scenarioButton');
+      
+      hyperButton.mousePressed(() => { hyperActive = true; hyperStartTime = millis(); hyperRebound = false; });
+      evdButton.mousePressed(() => { evdActive = !evdActive; evdButton.html(evdActive ? "Remove EVD" : "Toggle EVD"); });
+      pauseButton.mousePressed(() => { paused = !paused; pauseButton.html(paused ? "Resume" : "Pause"); });
+      downloadButton.mousePressed(downloadData);
+      resetButton.mousePressed(() => {
+        simStartTime = millis();
+        dataLog = [];
+        actualDiameter = baseDiameter;
+        actualICP = baselineICP;
+        hyperActive = hyperRebound = evdActive = false;
+        prolongedCheckbox.checked(false);
+        evdButton.html("Toggle EVD");
+        updateICPState();
+      });
+      scenarioButton.mousePressed(() => {
+        co2Slider.value(45);
+        mapSlider.value(90);
+        icpState.value("high");
+        swellingSeverity.value("moderate");
+        updateICPState();
+        alert("TBI Scenario: Patient with moderate swelling and high ICP (30–35 mmHg). Use CO₂ or EVD to manage.");
+      });
+      icpState.changed(updateICPState);
+      swellingSeverity.changed(updateICPState);
+      
+      simStartTime = millis();
+      updateICPState();
+    }
+    
+    function draw() {
+      background(240);
+      if (!paused) {
+        updateSimulation();
+      }
+      updateGraphs();
+      updateComplianceImage();
+      updateReadouts();
+      updateInfoMessage();
+    }
+    
+    function updateSimulation() {
+      let dt = deltaTime / 1000;
+      let simTime = (millis() - simStartTime) / 1000;
+      
+      let sliderCO2 = Number(co2Slider.value());
+      let mapVal = Number(mapSlider.value());
+      
+      let effectiveCO2 = sliderCO2;
+      if (prolongedCheckbox.checked()) {
+        effectiveCO2 = 30;
+      } else if (hyperActive) {
+        effectiveCO2 = 30;
+        if (millis() - hyperStartTime > hyperDuration) {
+          hyperActive = false;
+          hyperRebound = true;
+          reboundStartTime = millis();
+        }
+      } else if (hyperRebound) {
+        let reboundProgress = (millis() - reboundStartTime) / reboundDuration;
+        effectiveCO2 = 30 + (sliderCO2 - 30) * min(reboundProgress, 1);
+        if (reboundProgress >= 1) hyperRebound = false;
+      }
+      
+      co2Display.html(Math.round(effectiveCO2));
+      mapDisplay.html(mapVal);
+      
+      let factor = 1 + 0.03 * (effectiveCO2 - 35);
+      factor = max(factor, 0.1);
+      let targetDiameter = baseDiameter * pow(factor, 0.25);
+      actualDiameter += (targetDiameter - actualDiameter) * (dt / tauVessel);
+      
+      let swellingICP = { none: 0, mild: 5, moderate: 10, severe: 20 }[swellingSeverity.value()];
+      let ratio = sq(actualDiameter / baseDiameter) - 1;
+      let targetICP = baselineICP + alphaICP * ratio + swellingICP;
+      if (evdActive) targetICP = max(targetICP - 10, 10);
+      actualICP += (targetICP - actualICP) * (dt / tauICP);
+      
+      let cpp = mapVal - actualICP;
+      let cbf = 100 * pow(actualDiameter / baseDiameter, 4);
+      
+      dataLog.push({ t: simTime, ICP: actualICP, CPP: cpp, CBF: cbf });
+      while (dataLog.length > 0 && simTime - dataLog[0].t > timeWindow) {
+        dataLog.shift();
+      }
+    }
+    
+    function updateReadouts() {
+      let effectiveCO2 = prolongedCheckbox.checked() || hyperActive ? 30 : (hyperRebound ? Number(co2Display.html()) : Number(co2Slider.value()));
+      let mapVal = Number(mapSlider.value());
+      let cpp = mapVal - actualICP;
+      let cbf = 100 * pow(actualDiameter / baseDiameter, 4);
+      
+      let readoutsText =
+        "CO₂: " + Math.round(effectiveCO2) + " mmHg\n" +
+        "Vessel Diameter: " + nf(actualDiameter, 1, 1) + " units\n" +
+        "ICP: " + nf(actualICP, 1, 1) + " mmHg\n" +
+        "CPP: " + nf(cpp, 1, 1) + " mmHg\n" +
+        "CBF: " + nf(cbf, 1, 1) + "% of normal";
+      select('#numericalReadouts').html(readoutsText);
+      
+      let alertMsg = "";
+      if (actualICP > 20) alertMsg += "⚠ High ICP: Pressure up\n";
+      if (actualICP > 40) alertMsg += "⚠ Very High ICP: Brain at risk\n";
+      if (cbf < 50) alertMsg += "⚠ Low CBF: Less oxygen to brain\n";
+      if (cpp < 50) alertMsg += "⚠ Low CPP: Not enough blood pressure";
+      let alertEl = select('#alertMessage');
+      if (alertMsg) {
+        alertEl.html(alertMsg);
+        alertEl.style('display', 'block');
+      } else {
+        alertEl.style('display', 'none');
+      }
+    }
+    
+    function updateInfoMessage() {
+      let effectiveCO2 = prolongedCheckbox.checked() || hyperActive ? 30 : (hyperRebound ? Number(co2Display.html()) : Number(co2Slider.value()));
+      let cbf = 100 * pow(actualDiameter / baseDiameter, 4);
+      let msg = "";
+      
+      if (effectiveCO2 < 35) {
+        msg = "Low CO₂: Pressure down, but blood flow to brain is lower.";
+      } else if (effectiveCO2 > 45) {
+        msg = "High CO₂: More blood flow, but pressure in head is up.";
+      } else {
+        msg = "CO₂ at normal levels. Brain blood flow and pressure are balanced.";
+      }
+      if (hyperActive) {
+        msg += " Hyperventilating (short): Quick pressure drop underway.";
+      } else if (prolongedCheckbox.checked()) {
+        msg += " Hyperventilating (long): Pressure stays down, but less oxygen reaches brain.";
+      } else if (hyperRebound) {
+        msg += " CO₂ rising back: Pressure may go up soon.";
+      }
+      if (evdActive) {
+        msg += " EVD active: Draining fluid, lowering pressure.";
+      }
+      if (cbf < 50) {
+        msg += " Warning: Low blood flow means less oxygen to brain.";
+      }
+      select('#infoMessage').html(msg);
+    }
+    
+    function updateComplianceImage() {
+      let divEl = select('#complianceImage');
+      let capEl = select('#complianceCaption');
+      if (!divEl || !capEl) return;
+      
+      if (actualICP > complianceThreshold) {
+        divEl.style('background-position', '0% 100%');
+        capEl.html('Poor compliance (Bottom Half)');
+      } else {
+        divEl.style('background-position', '0% 0%');
+        capEl.html('Good compliance (Top Half)');
+      }
+    }
+    
+    function updateGraphs() {
+      let graphStartY = 20;
+      let graphX = 20;
+      let graphW = graphWidth - 40;
+      let graphH = 110;
+      let gap = 20;
+      
+      let currentTime = dataLog.length > 0 ? dataLog[dataLog.length - 1].t : 0;
+      
+      push();
+      translate(0, graphStartY);
+      drawGraph(graphX, 0, graphW, graphH, "ICP", 0, 60, color(0, 0, 200), "ICP (mmHg)");
+      translate(0, graphH + gap);
+      drawGraph(graphX, 0, graphW, graphH, "CPP", 0, 120, color(0, 150, 0), "CPP (mmHg)");
+      translate(0, graphH + gap);
+      drawGraph(graphX, 0, graphW, graphH, "CBF", 0, 150, color(200, 0, 0), "CBF (%)");
+      pop();
+    }
+    
+    function drawGraph(x, y, w, h, dataKey, yMin, yMax, lineColor, label) {
+      fill(255);
+      stroke(0);
+      rect(x, y, w, h);
+      textSize(12);
+      fill(0);
+      text(label, x + 5, y + 15);
+      
+      stroke(200);
+      strokeWeight(1);
+      for (let v = yMin; v <= yMax; v += (yMax - yMin) / 4) {
+        let yPos = map(v, yMin, yMax, y + h, y);
+        line(x, yPos, x + w, yPos);
+        fill(0);
+        text(Math.round(v), x + w + 5, yPos + 5);
+      }
+      if (dataKey === "ICP") {
+        stroke(255, 0, 0, 100);
+        line(x, map(20, yMin, yMax, y + h, y), x + w, map(20, yMin, yMax, y + h, y));
+        line(x, map(40, yMin, yMax, y + h, y), x + w, map(40, yMin, yMax, y + h, y));
+      } else if (dataKey === "CPP") {
+        stroke(255, 0, 0, 100);
+        line(x, map(50, yMin, yMax, y + h, y), x + w, map(50, yMin, yMax, y + h, y));
+      } else if (dataKey === "CBF") {
+        stroke(255, 0, 0, 100);
+        line(x, map(50, yMin, yMax, y + h, y), x + w, map(50, yMin, yMax, y + h, y));
+      }
+      
+      noFill();
+      stroke(lineColor);
+      strokeWeight(2);
+      beginShape();
+      let currentTime = dataLog.length > 0 ? dataLog[dataLog.length - 1].t : 0;
+      for (let i = 0; i < dataLog.length; i++) {
+        let d = dataLog[i];
+        let xPos = map(d.t, max(0, currentTime - timeWindow), currentTime, x, x + w);
+        let yPos = map(d[dataKey], yMin, yMax, y + h, y);
+        vertex(xPos, yPos);
+      }
+      endShape();
+    }
+    
+    function downloadData() {
+      let csvContent = "data:text/csv;charset=utf-8,Time(s),ICP (mmHg),CPP (mmHg),CBF (%)\n";
+      dataLog.forEach(row => {
+        let mapVal = Number(mapSlider.value());
+        csvContent += `${row.t.toFixed(2)},${row.ICP.toFixed(2)},${(mapVal - row.ICP).toFixed(2)},${row.CBF.toFixed(2)}\n`;
+      });
+      let encodedUri = encodeURI(csvContent);
+      let link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", "neuro_sim_data.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+    
+    function updateICPState() {
+      let state = icpState.value();
+      baselineICP = { normal: 12, elevated: 22, high: 32, critical: 45 }[state];
+      alphaICP = { normal: 50, elevated: 60, high: 70, critical: 80 }[state];
+      actualICP = baselineICP;
+    }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
