@@ -6,7 +6,9 @@ A client that queries the HAPI FHIR public test server (http://hapi.fhir.org/bas
 
 Prerequisites
 Java: JDK 11 or later (configured via JAVA_HOME)
+
 Maven: For building the project
+
 Apache Tomcat 9: For deploying the WAR file
 
 A client class (HapiFhirQueryClient.java) is included to query the public HAPI FHIR Test/Demo Server.
