@@ -25,7 +25,7 @@ An explainable machine learning pipeline utilizing the MIMIC-IV critical care da
 
 ### [Themis-Kansa (Clinical AI Governance & Audit)](./Themis-Kansa)
 - **Focus:** AI Model Validation & Fairness Auditing
-- **Description:** Evaluates ICU scoring and mortality models (such as SAPS II) on MIMIC-IV data to simulate a hospital AI governance committee audit. Tests for demographic parity, calibration (Brier scores), discrimination, and temporal drift.
+- **Description:** Audited ICU mortality scores (SAPS II, OASIS) on MIMIC-IV as a simulated hospital AI governance review, covering discrimination, calibration, subgroup fairness, temporal drift, and recalibration, with a final deployment recommendation.
 
 ### [Panacea-Shogo (EHR Interoperability)](./Panacea-Shogo)
 - **Focus:** SMART on FHIR Application & Medication Reconciliation
